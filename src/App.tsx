@@ -144,6 +144,35 @@ export default function App() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
+
+  const [visitorCount, setVisitorCount] = useState<number>(() => {
+    const saved = localStorage.getItem("weew_visitor_count");
+    if (saved) {
+      const num = parseInt(saved, 10);
+      if (!isNaN(num)) return num;
+    }
+    const initialSeed = 0;
+    localStorage.setItem("weew_visitor_count", initialSeed.toString());
+    return initialSeed;
+  });
+
+  const handleSaveVisitorCount = (count: number) => {
+    setVisitorCount(count);
+    localStorage.setItem("weew_visitor_count", count.toString());
+  };
+
+  useEffect(() => {
+    // Unique visitor check via localStorage
+    const hasVisited = localStorage.getItem("weew_has_visited");
+    if (!hasVisited) {
+      localStorage.setItem("weew_has_visited", "true");
+      setVisitorCount(prev => {
+        const next = prev + 1;
+        localStorage.setItem("weew_visitor_count", next.toString());
+        return next;
+      });
+    }
+  }, []);
   
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
     const saved = localStorage.getItem("weew_logged_in_user");
@@ -528,6 +557,7 @@ export default function App() {
         youtubeUrl={profile.youtubeUrl}
         tiktokUrl={profile.tiktokUrl}
         discordUrl={profile.discordUrl}
+        visitorCount={visitorCount}
       />
 
       {/* Auth Modal Component */}
@@ -571,6 +601,8 @@ export default function App() {
             onSaveAnnouncements={handleSaveAnnouncements}
             isRegistrationDisabled={isRegistrationDisabled}
             onToggleRegistration={handleToggleRegistration}
+            visitorCount={visitorCount}
+            onSaveVisitorCount={handleSaveVisitorCount}
           />
         )}
       </AnimatePresence>

@@ -14,6 +14,7 @@ interface FooterProps {
   youtubeUrl: string;
   tiktokUrl: string;
   discordUrl: string;
+  visitorCount?: number;
 }
 
 export default function Footer({
@@ -27,7 +28,8 @@ export default function Footer({
   instagramUrl,
   youtubeUrl,
   tiktokUrl,
-  discordUrl
+  discordUrl,
+  visitorCount
 }: FooterProps) {
   
   const handleNavClick = (id: string) => {
@@ -189,8 +191,16 @@ export default function Footer({
           <div>
             © 2026 <span className="uppercase">{siteName}</span> – {translations.footerRights}
           </div>
-          <div className="flex items-center space-x-1 tracking-wider text-gray-600">
-            <span>WEEW ENGINE v1.2</span>
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            {visitorCount !== undefined && (
+              <span className="flex items-center gap-1.5 text-amber-500 bg-amber-500/5 px-2.5 py-1 rounded-lg border border-amber-500/10 tracking-widest font-extrabold uppercase">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                👁️ {visitorCount.toLocaleString("tr-TR")} {lang === "TR" ? "ZİYARETÇİ" : "VISITORS"}
+              </span>
+            )}
+            <div className="flex items-center space-x-1 tracking-wider text-gray-600">
+              <span>WEEW ENGINE v1.2</span>
+            </div>
           </div>
         </div>
       </div>

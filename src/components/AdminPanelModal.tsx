@@ -91,6 +91,8 @@ interface AdminPanelModalProps {
   onSaveAnnouncements: (updated: Announcement[]) => void;
   isRegistrationDisabled?: boolean;
   onToggleRegistration?: (disabled: boolean) => void;
+  visitorCount?: number;
+  onSaveVisitorCount?: (count: number) => void;
 }
 
 interface MessageInboxItem {
@@ -176,12 +178,33 @@ export default function AdminPanelModal({
   announcements,
   onSaveAnnouncements,
   isRegistrationDisabled = false,
-  onToggleRegistration
+  onToggleRegistration,
+  visitorCount = 0,
+  onSaveVisitorCount
 }: AdminPanelModalProps) {
   const [activeSubTab, setActiveSubTab] = useState<"dashboard" | "profile" | "settings" | "inbox" | "users" | "stream" | "crosshairs" | "playlists" | "specs" | "announcements">("dashboard");
   const [formData, setFormData] = useState<UserProfile>({ ...profile });
   const [settingsForm, setSettingsForm] = useState<CS2SettingsData>({ ...cs2Settings });
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  // Scroll Position Retention & Fluid Transition Refs
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const tabScrollPositions = React.useRef<Record<string, number>>({});
+
+  const handleTabChange = (newTab: typeof activeSubTab) => {
+    if (scrollContainerRef.current) {
+      tabScrollPositions.current[activeSubTab] = scrollContainerRef.current.scrollTop;
+    }
+    setSavedSuccess(false);
+    setActiveSubTab(newTab);
+    
+    // Smooth micro-transition animation frame delay
+    requestAnimationFrame(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = tabScrollPositions.current[newTab] || 0;
+      }
+    });
+  };
 
   // Elegant Toast System States
   interface ToastMessage {
@@ -938,11 +961,10 @@ export default function AdminPanelModal({
                 <button
                   key={tab.id}
                   onClick={() => {
-                    setSavedSuccess(false);
                     if (tab.id === "profile") {
-                      setActiveSubTab("dashboard");
+                      handleTabChange("dashboard");
                     } else {
-                      setActiveSubTab(tab.id as any);
+                      handleTabChange(tab.id as any);
                     }
                   }}
                   className={`flex items-center space-x-2 rounded-xl px-3 sm:px-4 py-2 text-xs font-bold uppercase tracking-wider transition whitespace-nowrap cursor-pointer border ${
@@ -963,8 +985,16 @@ export default function AdminPanelModal({
         </div>
 
         {/* Scrollable Main Content Container */}
-        <div className="flex-1 p-4 sm:p-6 overflow-y-auto custom-scrollbar flex flex-col justify-between">
-          <div className="flex-1">
+        <div ref={scrollContainerRef} className="flex-1 p-4 sm:p-6 overflow-y-auto custom-scrollbar flex flex-col justify-between">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeSubTab}
+              initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
+              transition={{ duration: 0.18, ease: "easeInOut" }}
+              className="flex-1"
+            >
             {/* Sub Tabs for Profil Category (Dashboard, Profile edit, Inbox, Registered users) */}
             {["dashboard", "profile", "inbox", "users"].includes(activeSubTab) && (
               <div className="flex items-center flex-wrap gap-1.5 mb-5 pb-4 border-b border-white/5">
@@ -977,8 +1007,7 @@ export default function AdminPanelModal({
                   <button
                     key={subTab.id}
                     onClick={() => {
-                      setSavedSuccess(false);
-                      setActiveSubTab(subTab.id as any);
+                      handleTabChange(subTab.id as any);
                     }}
                     className={`flex items-center space-x-1.5 sm:space-x-2 rounded-xl px-2.5 sm:px-3.5 py-1.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider transition cursor-pointer border ${
                       activeSubTab === subTab.id
@@ -1027,7 +1056,7 @@ export default function AdminPanelModal({
             {activeSubTab === "dashboard" && (
               <div className="space-y-6">
                 {/* Stats Widgets Grid */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                   {/* Stat 1: Stream */}
                   <div className="p-4 sm:p-5 rounded-2xl bg-[#11121d] border border-white/5 flex flex-col justify-between relative overflow-hidden group hover:border-purple-500/30 transition-all duration-300">
                     <div className="absolute top-0 right-0 h-24 w-24 bg-purple-500/5 rounded-full blur-2xl group-hover:bg-purple-500/10 transition-colors" />
@@ -1047,7 +1076,7 @@ export default function AdminPanelModal({
 
                   {/* Stat 2: Messages */}
                   <div 
-                    onClick={() => setActiveSubTab("inbox")} 
+                    onClick={() => handleTabChange("inbox")} 
                     className="p-4 sm:p-5 rounded-2xl bg-[#11121d] border border-white/5 flex flex-col justify-between relative overflow-hidden group hover:border-purple-500/30 transition-all duration-300 cursor-pointer"
                   >
                     <div className="absolute top-0 right-0 h-24 w-24 bg-blue-500/5 rounded-full blur-2xl" />
@@ -1067,7 +1096,7 @@ export default function AdminPanelModal({
 
                   {/* Stat 3: Registered Users */}
                   <div 
-                    onClick={() => setActiveSubTab("users")} 
+                    onClick={() => handleTabChange("users")} 
                     className="p-4 sm:p-5 rounded-2xl bg-[#11121d] border border-white/5 flex flex-col justify-between relative overflow-hidden group hover:border-purple-500/30 transition-all duration-300 cursor-pointer"
                   >
                     <div className="absolute top-0 right-0 h-24 w-24 bg-pink-500/5 rounded-full blur-2xl" />
@@ -1087,7 +1116,7 @@ export default function AdminPanelModal({
 
                   {/* Stat 4: Crosshairs */}
                   <div 
-                    onClick={() => setActiveSubTab("crosshairs")} 
+                    onClick={() => handleTabChange("crosshairs")} 
                     className="p-4 sm:p-5 rounded-2xl bg-[#11121d] border border-white/5 flex flex-col justify-between relative overflow-hidden group hover:border-purple-500/30 transition-all duration-300 cursor-pointer"
                   >
                     <div className="absolute top-0 right-0 h-24 w-24 bg-[#00e676]/5 rounded-full blur-2xl" />
@@ -1101,6 +1130,31 @@ export default function AdminPanelModal({
                       </span>
                       <span className="text-[9px] text-gray-500 font-bold block uppercase tracking-wider mt-1 hover:text-[#00e676] transition-colors">
                         GALERİYİ DÜZENLE →
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Stat 5: Visitor Counter */}
+                  <div 
+                    onClick={() => {
+                      const el = document.getElementById("visitor-counter-section");
+                      if (el) {
+                        el.scrollIntoView({ behavior: "smooth" });
+                      }
+                    }}
+                    className="p-4 sm:p-5 rounded-2xl bg-[#11121d] border border-white/5 flex flex-col justify-between relative overflow-hidden group hover:border-purple-500/30 transition-all duration-300 cursor-pointer col-span-2 md:col-span-1"
+                  >
+                    <div className="absolute top-0 right-0 h-24 w-24 bg-amber-500/5 rounded-full blur-2xl" />
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-mono text-amber-400 uppercase tracking-widest">Tekil Ziyaretçi</span>
+                      <Eye className="h-4 w-4 text-amber-400" />
+                    </div>
+                    <div>
+                      <span className="text-xl font-black text-white block">
+                        {visitorCount.toLocaleString("tr-TR")}
+                      </span>
+                      <span className="text-[9px] text-gray-500 font-bold block uppercase tracking-wider mt-1 hover:text-amber-300 transition-colors">
+                        SAYACI YÖNET →
                       </span>
                     </div>
                   </div>
@@ -1144,6 +1198,96 @@ export default function AdminPanelModal({
                       >
                         {isStreamLive ? "YAYINI KAPAT (OFFLINE)" : "YAYINI BAŞLAT (LIVE)"}
                       </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ziyaretçi Sayacı Kontrolü */}
+                <div id="visitor-counter-section" className="p-6 rounded-3xl bg-[#11121d] border border-white/5 space-y-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                      <span className="text-[10px] font-mono text-amber-400 uppercase tracking-widest block font-bold mb-1">
+                        👁️ ZİYARETÇİ SAYACI YÖNETİMİ
+                      </span>
+                      <h3 className="font-display text-sm font-extrabold text-white uppercase tracking-wider">
+                        Tekil Ziyaretçi Sayacı Ayarları
+                      </h3>
+                      <p className="text-xs text-gray-400 font-medium leading-relaxed max-w-xl">
+                        Sitenize gelen tekil ziyaretçi sayısını simüle edin veya başlangıç sayısını değiştirin. Her yeni tarayıcı ziyaretinde bu sayaç otomatik olarak 1 artar.
+                      </p>
+                    </div>
+
+                    {/* Quick increment buttons */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onSaveVisitorCount) {
+                            onSaveVisitorCount(visitorCount + 100);
+                            showToast("Sayaca +100 tekil ziyaretçi eklendi!", "success");
+                          }
+                        }}
+                        className="rounded-xl bg-[#221f1c] hover:bg-[#2d2822] border border-amber-500/10 hover:border-amber-500/25 px-3 py-2 text-[10px] font-bold text-amber-400 transition cursor-pointer"
+                      >
+                        +100 Ziyaretçi
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onSaveVisitorCount) {
+                            onSaveVisitorCount(visitorCount + 1000);
+                            showToast("Sayaca +1,000 tekil ziyaretçi eklendi!", "success");
+                          }
+                        }}
+                        className="rounded-xl bg-[#221f1c] hover:bg-[#2d2822] border border-amber-500/10 hover:border-amber-500/25 px-3 py-2 text-[10px] font-bold text-amber-400 transition cursor-pointer"
+                      >
+                        +1,000 Ziyaretçi
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-white/5">
+                    {/* Current counter display input */}
+                    <div className="space-y-1.5 col-span-2">
+                      <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block">
+                        Mevcut Sayaç Değeri (Tekil Ziyaretçiler)
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          value={visitorCount}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            if (onSaveVisitorCount && !isNaN(val)) {
+                              onSaveVisitorCount(val);
+                            }
+                          }}
+                          placeholder="Örn: 2450"
+                          className="w-full rounded-xl bg-[#0c0d16] border border-white/5 px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 font-bold"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onSaveVisitorCount) {
+                              onSaveVisitorCount(0);
+                              showToast("Sayaç başarıyla sıfırlandı.", "info");
+                            }
+                          }}
+                          className="rounded-xl bg-red-600/15 hover:bg-red-600/25 border border-red-500/20 text-red-400 text-xs px-4 font-bold transition cursor-pointer"
+                        >
+                          Sıfırla
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Stats insight card */}
+                    <div className="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/10 flex flex-col justify-center">
+                      <div className="text-[10px] font-mono text-amber-400/80 uppercase font-bold tracking-widest mb-1">
+                        Sistem Raporu
+                      </div>
+                      <div className="text-xs text-amber-200 font-semibold leading-normal">
+                        Kayıtlı {registeredUsers.length} üyeye karşılık, {visitorCount} tekil ziyaret oranı tespit edildi.
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -3578,7 +3722,8 @@ export default function AdminPanelModal({
               </div>
             )}
 
-          </div>
+          </motion.div>
+        </AnimatePresence>
 
           {/* Footer of modal */}
           <div className="border-t border-white/5 pt-4 mt-8 flex justify-end">
