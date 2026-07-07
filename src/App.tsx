@@ -80,6 +80,32 @@ export default function App() {
   const [lang, setLang] = useState<"TR" | "EN">("TR");
   const [activeSection, setActiveSection] = useState("home");
   const [isStreamLive, setIsStreamLive] = useState(false);
+
+  // Simulated Kick Live Stream details managed dynamically via Admin Panel
+  const [streamCategory, setStreamCategory] = useState<string>(() => {
+    return localStorage.getItem("weew_stream_category") || "Counter-Strike 2";
+  });
+  const [streamTitle, setStreamTitle] = useState<string>(() => {
+    return localStorage.getItem("weew_stream_title") || "Rekabetçi Maçlar & Topluluk Yayını";
+  });
+  const [streamViewers, setStreamViewers] = useState<string>(() => {
+    return localStorage.getItem("weew_stream_viewers") || "1400";
+  });
+
+  const handleSaveStreamCategory = (val: string) => {
+    setStreamCategory(val);
+    localStorage.setItem("weew_stream_category", val);
+  };
+
+  const handleSaveStreamTitle = (val: string) => {
+    setStreamTitle(val);
+    localStorage.setItem("weew_stream_title", val);
+  };
+
+  const handleSaveStreamViewers = (val: string) => {
+    setStreamViewers(val);
+    localStorage.setItem("weew_stream_viewers", val);
+  };
   
   // Auth & Admin Modal States
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -212,7 +238,7 @@ export default function App() {
 
   return (
     <div 
-      className="min-h-screen bg-[#08090d] text-gray-100 font-sans grid-bg select-none flex flex-col justify-between"
+      className="min-h-screen bg-[#08090d] text-gray-100 font-sans grid-bg select-none flex flex-col justify-between overflow-x-hidden w-full"
       id="app-root-container"
     >
       {/* Sticky Navigation Header with Auth Bindings */}
@@ -266,6 +292,10 @@ export default function App() {
                 profilePhoto={profile.profilePhoto}
                 kickUsername={profile.kickUsername}
                 kickUrl={profile.kickUrl}
+                currentUser={currentUser}
+                streamCategory={streamCategory}
+                streamTitle={streamTitle}
+                streamViewers={streamViewers}
               />
 
               {/* YouTube Section */}
@@ -397,6 +427,12 @@ export default function App() {
             onSaveCs2Settings={handleSaveCs2Settings}
             crosshairs={crosshairs}
             onSaveCrosshairs={handleSaveCrosshairs}
+            streamCategory={streamCategory}
+            onSaveStreamCategory={handleSaveStreamCategory}
+            streamTitle={streamTitle}
+            onSaveStreamTitle={handleSaveStreamTitle}
+            streamViewers={streamViewers}
+            onSaveStreamViewers={handleSaveStreamViewers}
           />
         )}
       </AnimatePresence>

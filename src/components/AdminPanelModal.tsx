@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { 
   X, Save, Image, User, Shield, Users, Mail, Tv, 
   Settings2, Trash2, Check, RefreshCw, MessageSquare, AlertCircle, Award,
-  Upload, Smartphone, Sliders, Play, Info, Plus, Target, ExternalLink
+  Upload, Smartphone, Sliders, Play, Info, Plus, Target, ExternalLink,
+  LayoutDashboard, Radio, Eye, Activity
 } from "lucide-react";
 import { UserProfile } from "./EditProfileModal";
 import { UserAccount } from "./AuthModal";
@@ -22,6 +23,12 @@ interface AdminPanelModalProps {
   onSaveCs2Settings: (updated: CS2SettingsData) => void;
   crosshairs: CrosshairItem[];
   onSaveCrosshairs: (updated: CrosshairItem[]) => void;
+  streamCategory: string;
+  onSaveStreamCategory: (val: string) => void;
+  streamTitle: string;
+  onSaveStreamTitle: (val: string) => void;
+  streamViewers: string;
+  onSaveStreamViewers: (val: string) => void;
 }
 
 interface MessageInboxItem {
@@ -50,9 +57,15 @@ export default function AdminPanelModal({
   cs2Settings,
   onSaveCs2Settings,
   crosshairs,
-  onSaveCrosshairs
+  onSaveCrosshairs,
+  streamCategory,
+  onSaveStreamCategory,
+  streamTitle,
+  onSaveStreamTitle,
+  streamViewers,
+  onSaveStreamViewers
 }: AdminPanelModalProps) {
-  const [activeSubTab, setActiveSubTab] = useState<"profile" | "settings" | "inbox" | "users" | "stream" | "crosshairs">("profile");
+  const [activeSubTab, setActiveSubTab] = useState<"dashboard" | "profile" | "settings" | "inbox" | "users" | "stream" | "crosshairs">("dashboard");
   const [formData, setFormData] = useState<UserProfile>({ ...profile });
   const [settingsForm, setSettingsForm] = useState<CS2SettingsData>({ ...cs2Settings });
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -197,6 +210,32 @@ export default function AdminPanelModal({
     }
 
     setRegisteredUsers(usersList);
+  };
+
+  const handleGenerateMockMessage = () => {
+    const names = ["Berkay Öztürk", "Selin Demir", "Alperen Şen", "Görkem Yılmaz", "İlayda Çelik"];
+    const emails = ["berkay@gmail.com", "selin@hotmail.com", "alperen@outlook.com", "gorkem@gmail.com", "ilayda@outlook.com"];
+    const textOptions = [
+      "Kullandığın crosshair gerçekten harika, bütün maçlarda bunu kullanmaya başladım!",
+      "Yayın kaliten inanılmaz derecede akıcı, hangi OBS ayarlarını kullanıyorsun?",
+      "Bir sonraki yayında topluluk maçı veya izleyici turnuvası yapacak mısın?",
+      "Yeni kurduğun sistem parçaları hakkında detaylı bir inceleme videosu gelse çok güzel olur.",
+      "Selam, sponsorluk detayları hakkında görüşmek isteriz. Discord adresinden istek attım."
+    ];
+    const randomIndex = Math.floor(Math.random() * names.length);
+    const newMsg: MessageInboxItem = {
+      id: `mock-${Date.now()}`,
+      name: names[randomIndex],
+      email: emails[randomIndex],
+      message: textOptions[randomIndex],
+      date: new Date().toLocaleString("tr-TR")
+    };
+    
+    const updatedMessages = [newMsg, ...messages];
+    setMessages(updatedMessages);
+    localStorage.setItem("weew_messages", JSON.stringify(updatedMessages));
+    setSavedSuccess(true);
+    setTimeout(() => setSavedSuccess(false), 2000);
   };
 
   if (!isOpen) return null;
@@ -359,6 +398,18 @@ export default function AdminPanelModal({
             {/* Nav Buttons */}
             <nav className="space-y-1">
               <button
+                onClick={() => { setActiveSubTab("dashboard"); setSavedSuccess(false); }}
+                className={`w-full flex items-center space-x-3 rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-wider transition ${
+                  activeSubTab === "dashboard"
+                    ? "bg-purple-600/15 border border-purple-500/30 text-purple-400"
+                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                <span>Genel Bakış</span>
+              </button>
+
+              <button
                 onClick={() => { setActiveSubTab("profile"); setSavedSuccess(false); }}
                 className={`w-full flex items-center space-x-3 rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-wider transition ${
                   activeSubTab === "profile"
@@ -457,6 +508,7 @@ export default function AdminPanelModal({
             {/* Header top row */}
             <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-6">
               <h2 className="font-display text-xl font-bold text-white uppercase tracking-wider">
+                {activeSubTab === "dashboard" && "Yönetim Paneli Genel Bakış"}
                 {activeSubTab === "profile" && "Portalı Düzenle & Özelleştir"}
                 {activeSubTab === "settings" && "CS2 Oyun Ayarlarını Düzenle"}
                 {activeSubTab === "inbox" && `Gelen Mesajlar Kutusu (${messages.length})`}
@@ -477,6 +529,214 @@ export default function AdminPanelModal({
               <div className="mb-6 flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-3 text-xs font-semibold">
                 <Check className="h-4 w-4" />
                 <span>Değişiklikler başarıyla kaydedildi ve tüm sayfaya uygulandı!</span>
+              </div>
+            )}
+
+            {/* Tab: Dashboard Overview */}
+            {activeSubTab === "dashboard" && (
+              <div className="space-y-6">
+                {/* Stats Widgets Grid */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Stat 1: Stream */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-[#11121d] border border-white/5 flex flex-col justify-between relative overflow-hidden group hover:border-purple-500/30 transition-all duration-300">
+                    <div className="absolute top-0 right-0 h-24 w-24 bg-purple-500/5 rounded-full blur-2xl group-hover:bg-purple-500/10 transition-colors" />
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest">Yayın Durumu</span>
+                      <Radio className={`h-4 w-4 ${isStreamLive ? "text-[#00e676] animate-pulse" : "text-gray-500"}`} />
+                    </div>
+                    <div>
+                      <span className="text-xl font-black text-white block">
+                        {isStreamLive ? "CANLI" : "ÇEVRİMDIŞI"}
+                      </span>
+                      <span className="text-[9px] text-gray-500 font-bold block uppercase tracking-wider mt-1">
+                        {isStreamLive ? `${Number(streamViewers).toLocaleString("tr-TR")} İZLEYİCİ` : "YAYIN YAPILMIYOR"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Stat 2: Messages */}
+                  <div 
+                    onClick={() => setActiveSubTab("inbox")} 
+                    className="p-4 sm:p-5 rounded-2xl bg-[#11121d] border border-white/5 flex flex-col justify-between relative overflow-hidden group hover:border-purple-500/30 transition-all duration-300 cursor-pointer"
+                  >
+                    <div className="absolute top-0 right-0 h-24 w-24 bg-blue-500/5 rounded-full blur-2xl" />
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-mono text-blue-400 uppercase tracking-widest">Gelen Kutusu</span>
+                      <Mail className="h-4 w-4 text-blue-400" />
+                    </div>
+                    <div>
+                      <span className="text-xl font-black text-white block">
+                        {messages.length}
+                      </span>
+                      <span className="text-[9px] text-gray-500 font-bold block uppercase tracking-wider mt-1 hover:text-blue-300 transition-colors">
+                        MESAJLARA GİT →
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Stat 3: Registered Users */}
+                  <div 
+                    onClick={() => setActiveSubTab("users")} 
+                    className="p-4 sm:p-5 rounded-2xl bg-[#11121d] border border-white/5 flex flex-col justify-between relative overflow-hidden group hover:border-purple-500/30 transition-all duration-300 cursor-pointer"
+                  >
+                    <div className="absolute top-0 right-0 h-24 w-24 bg-pink-500/5 rounded-full blur-2xl" />
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-mono text-pink-400 uppercase tracking-widest">Kayıtlı Üyeler</span>
+                      <Users className="h-4 w-4 text-pink-400" />
+                    </div>
+                    <div>
+                      <span className="text-xl font-black text-white block">
+                        {registeredUsers.length}
+                      </span>
+                      <span className="text-[9px] text-gray-500 font-bold block uppercase tracking-wider mt-1 hover:text-pink-300 transition-colors">
+                        ÜYELERİ YÖNET →
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Stat 4: Crosshairs */}
+                  <div 
+                    onClick={() => setActiveSubTab("crosshairs")} 
+                    className="p-4 sm:p-5 rounded-2xl bg-[#11121d] border border-white/5 flex flex-col justify-between relative overflow-hidden group hover:border-purple-500/30 transition-all duration-300 cursor-pointer"
+                  >
+                    <div className="absolute top-0 right-0 h-24 w-24 bg-[#00e676]/5 rounded-full blur-2xl" />
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-mono text-[#00e676] uppercase tracking-widest">Crosshairler</span>
+                      <Target className="h-4 w-4 text-[#00e676]" />
+                    </div>
+                    <div>
+                      <span className="text-xl font-black text-white block">
+                        {crosshairs.length}
+                      </span>
+                      <span className="text-[9px] text-gray-500 font-bold block uppercase tracking-wider mt-1 hover:text-[#00e676] transition-colors">
+                        GALERİYİ DÜZENLE →
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Stream Simulator Controls Panel */}
+                <div className="p-6 rounded-3xl bg-gradient-to-br from-purple-950/20 to-indigo-950/20 border border-purple-500/10 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 h-40 w-40 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+                  <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-[#00e676] animate-ping" />
+                        <span className="text-[10px] font-mono font-bold text-[#00e676] uppercase tracking-widest">Hızlı Yayın Simülatörü</span>
+                      </div>
+                      <h3 className="font-display text-lg font-extrabold text-white uppercase tracking-wider">
+                        KICK CANLI YAYIN DURUMUNUZU KONTROL EDİN
+                      </h3>
+                      <p className="text-xs text-gray-400 max-w-xl font-medium">
+                        Ana sayfadaki canlı yayın simülasyonunu anlık başlatıp kapatın. Yayın aktifken kategori, izleyici sayısı ve başlık verileri canlı olarak güncellenir.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setIsStreamLive(!isStreamLive)}
+                        className={`rounded-2xl px-6 py-3 text-xs font-black uppercase tracking-widest transition duration-300 cursor-pointer ${
+                          isStreamLive 
+                            ? "bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]" 
+                            : "bg-[#00e676] hover:bg-[#00c853] text-black shadow-[0_0_15px_rgba(0,230,118,0.4)]"
+                        }`}
+                      >
+                        {isStreamLive ? "YAYINI KAPAT (OFFLINE)" : "YAYINI BAŞLAT (LIVE)"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Main Dynamic Simulation Metadata Panel */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Stream Customizer */}
+                  <div className="p-6 rounded-3xl bg-[#11121d] border border-white/5 space-y-4">
+                    <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest block font-bold">
+                      YAYIN PARAMETRE AYARLARI
+                    </span>
+
+                    <div className="space-y-3.5">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block">
+                          Yayın Başlığı (Simulated Stream Title)
+                        </label>
+                        <input
+                          type="text"
+                          value={streamTitle}
+                          onChange={(e) => onSaveStreamTitle(e.target.value)}
+                          placeholder="Örn: Rekabetçi Maçlar & Topluluk Yayını"
+                          className="w-full rounded-xl bg-[#0c0d16] border border-white/5 px-4 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block">
+                            Kategori (Game/Category)
+                          </label>
+                          <input
+                            type="text"
+                            value={streamCategory}
+                            onChange={(e) => onSaveStreamCategory(e.target.value)}
+                            placeholder="Counter-Strike 2"
+                            className="w-full rounded-xl bg-[#0c0d16] border border-white/5 px-4 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block">
+                            Simüle İzleyici Sayısı
+                          </label>
+                          <input
+                            type="text"
+                            value={streamViewers}
+                            onChange={(e) => onSaveStreamViewers(e.target.value)}
+                            placeholder="1400"
+                            className="w-full rounded-xl bg-[#0c0d16] border border-white/5 px-4 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quick System Utilities */}
+                  <div className="p-6 rounded-3xl bg-[#11121d] border border-white/5 space-y-4 flex flex-col justify-between">
+                    <div>
+                      <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest block font-bold mb-3">
+                        HIZLI SİSTEM ARAÇLARI
+                      </span>
+                      <p className="text-xs text-gray-400 mb-4 font-medium leading-relaxed">
+                        Sitenizin düzgün çalıştığını test etmek için gelen kutusuna otomatik olarak rastgele kullanıcı mesajları ekleyebilir veya tüm bilgileri sıfırlayabilirsiniz.
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <button
+                        type="button"
+                        onClick={handleGenerateMockMessage}
+                        className="w-full flex items-center justify-between rounded-xl bg-purple-600/10 hover:bg-purple-600/20 border border-purple-500/20 text-xs text-purple-300 font-bold px-4 py-3.5 transition group cursor-pointer"
+                      >
+                        <span className="uppercase tracking-wider">Test Mesajı Üret (Gelen Kutusu İçin)</span>
+                        <MessageSquare className="h-4 w-4 text-purple-400 group-hover:scale-110 transition" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm("Tüm mesajlaşma geçmişini ve kayıtları varsayılana sıfırlamak istiyor musunuz?")) {
+                            localStorage.removeItem("weew_messages");
+                            loadMessages();
+                          }
+                        }}
+                        className="w-full flex items-center justify-between rounded-xl bg-red-600/10 hover:bg-red-600/20 border border-red-500/20 text-xs text-red-400 font-bold px-4 py-3.5 transition group cursor-pointer"
+                      >
+                        <span className="uppercase tracking-wider">Mesaj Geçmişini Sıfırla</span>
+                        <RefreshCw className="h-4 w-4 text-red-400 group-hover:rotate-180 transition duration-500" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1479,28 +1739,67 @@ export default function AdminPanelModal({
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="p-5 rounded-3xl bg-white/5 border border-white/5">
-                    <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest block mb-2">Canlı Yayın Bilgisi</span>
-                    <div className="space-y-1.5">
-                      <span className="text-xs font-bold text-gray-400 block uppercase">Simüle Edilen Kategori</span>
-                      <div className="text-sm text-white font-extrabold bg-[#0c0d16] p-3 rounded-xl border border-white/5">
-                        Counter-Strike 2
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Left: Interactive Customizer */}
+                  <div className="p-5 rounded-3xl bg-white/5 border border-white/5 space-y-4">
+                    <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest block font-bold">YAYIN PARAMETRELERİNİ ÖZELLEŞTİR</span>
+                    
+                    <div className="space-y-3.5">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-mono text-gray-400 uppercase block">YAYIN BAŞLIĞI</label>
+                        <input
+                          type="text"
+                          value={streamTitle}
+                          onChange={(e) => onSaveStreamTitle(e.target.value)}
+                          placeholder="Örn: Rekabetçi Maçlar & Topluluk Yayını"
+                          className="w-full rounded-xl bg-[#0c0d16] border border-white/5 px-4 py-2 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-mono text-gray-400 uppercase block">KATEGORİ / OYUN</label>
+                          <input
+                            type="text"
+                            value={streamCategory}
+                            onChange={(e) => onSaveStreamCategory(e.target.value)}
+                            placeholder="Counter-Strike 2"
+                            className="w-full rounded-xl bg-[#0c0d16] border border-white/5 px-4 py-2 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-mono text-gray-400 uppercase block">İZLEYİCİ SAYISI</label>
+                          <input
+                            type="text"
+                            value={streamViewers}
+                            onChange={(e) => onSaveStreamViewers(e.target.value)}
+                            placeholder="1400"
+                            className="w-full rounded-xl bg-[#0c0d16] border border-white/5 px-4 py-2 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="p-5 rounded-3xl bg-white/5 border border-white/5">
-                    <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest block mb-2">Hızlı Metrikler</span>
+                  {/* Right: Metrics preview */}
+                  <div className="p-5 rounded-3xl bg-white/5 border border-white/5 space-y-4">
+                    <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest block font-bold">ANLIK GÖSTERGE METRİKLERİ</span>
                     <div className="grid grid-cols-2 gap-3 text-center">
-                      <div className="bg-[#0c0d16] p-3 rounded-xl border border-white/5">
-                        <span className="text-[10px] text-gray-500 font-bold block uppercase">İzleyici</span>
-                        <span className="text-sm text-white font-black">{isStreamLive ? "1,245" : "0"}</span>
+                      <div className="bg-[#0c0d16] p-4 rounded-xl border border-white/5 flex flex-col justify-center">
+                        <span className="text-[9px] text-gray-500 font-bold block uppercase tracking-wider mb-1">İZLEYİCİ</span>
+                        <span className="text-base text-white font-black">
+                          {isStreamLive ? Number(streamViewers).toLocaleString("tr-TR") : "0"}
+                        </span>
                       </div>
-                      <div className="bg-[#0c0d16] p-3 rounded-xl border border-white/5">
-                        <span className="text-[10px] text-gray-500 font-bold block uppercase">Takipçi</span>
-                        <span className="text-sm text-white font-black">23,450</span>
+                      <div className="bg-[#0c0d16] p-4 rounded-xl border border-white/5 flex flex-col justify-center">
+                        <span className="text-[9px] text-gray-500 font-bold block uppercase tracking-wider mb-1">TAKİPÇİ</span>
+                        <span className="text-base text-white font-black">23,450</span>
                       </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-purple-500/5 border border-purple-500/10 text-[10px] text-purple-300 font-semibold leading-normal">
+                      💡 Yayın parametrelerindeki tüm değişiklikler anında kaydedilir ve ana sayfadaki video oynatıcısında canlı olarak güncellenir.
                     </div>
                   </div>
                 </div>

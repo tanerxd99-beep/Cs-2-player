@@ -1,6 +1,7 @@
 import React from "react";
 import { Tv, Radio, Heart, Volume2 } from "lucide-react";
 import { TranslationDict } from "../types";
+import { UserAccount } from "./AuthModal";
 
 interface KickLiveSectionProps {
   translations: TranslationDict;
@@ -10,6 +11,10 @@ interface KickLiveSectionProps {
   profilePhoto: string;
   kickUsername: string;
   kickUrl: string;
+  currentUser?: UserAccount | null;
+  streamCategory?: string;
+  streamTitle?: string;
+  streamViewers?: string;
 }
 
 export default function KickLiveSection({
@@ -19,7 +24,11 @@ export default function KickLiveSection({
   siteName,
   profilePhoto,
   kickUsername,
-  kickUrl
+  kickUrl,
+  currentUser,
+  streamCategory = "Counter-Strike 2",
+  streamTitle = "Rekabetçi Maçlar & Topluluk Yayını",
+  streamViewers = "1400"
 }: KickLiveSectionProps) {
   return (
     <section id="kick-stream" className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative">
@@ -43,18 +52,25 @@ export default function KickLiveSection({
         </div>
 
         {/* Demo Switcher */}
-        <div className="flex items-center space-x-2 bg-white/5 border border-white/5 px-3 py-1.5 rounded-full text-xs text-gray-400">
-          <span>Yayın Modu:</span>
-          <button
-            onClick={() => setIsStreamLive(!isStreamLive)}
-            id="kick-toggle-live-btn"
-            className={`px-2.5 py-0.5 rounded-full font-bold uppercase transition ${
-              isStreamLive ? "bg-[#00e676]/20 text-[#00e676]" : "bg-gray-800 text-gray-500"
-            }`}
-          >
-            {isStreamLive ? translations.kickLive : translations.kickOffline}
-          </button>
-        </div>
+        {currentUser?.role === "admin" ? (
+          <div className="flex items-center space-x-2 bg-white/5 border border-white/5 px-3 py-1.5 rounded-full text-xs text-gray-400">
+            <span className="font-bold text-purple-400">Yönetici Modu:</span>
+            <button
+              onClick={() => setIsStreamLive(!isStreamLive)}
+              id="kick-toggle-live-btn"
+              className={`px-2.5 py-0.5 rounded-full font-bold uppercase transition ${
+                isStreamLive ? "bg-[#00e676]/20 text-[#00e676]" : "bg-gray-800 text-gray-500"
+              }`}
+            >
+              {isStreamLive ? translations.kickLive : translations.kickOffline}
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center space-x-2 bg-[#12131d] border border-white/5 px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-400">
+            <span className="h-2 w-2 rounded-full bg-purple-500" />
+            <span>Yayın Programı</span>
+          </div>
+        )}
       </div>
 
       {/* Main Broadcast Module */}
@@ -75,13 +91,13 @@ export default function KickLiveSection({
                 {isStreamLive ? translations.kickLive : translations.kickOffline}
               </span>
               <span className="font-mono text-xs text-gray-400 font-semibold uppercase">
-                {isStreamLive ? `${siteName} is playing Counter-Strike 2` : `${siteName} is offline`}
+                {isStreamLive ? `${siteName} is playing ${streamCategory}` : `${siteName} is offline`}
               </span>
             </div>
             {isStreamLive && (
-              <div className="flex items-center text-red-500 text-xs font-semibold gap-1">
+              <div className="flex items-center text-[#00e676] text-xs font-semibold gap-1 bg-[#00e676]/10 px-2.5 py-1 rounded-full border border-[#00e676]/20">
                 <Radio className="h-3.5 w-3.5 animate-pulse" />
-                <span>1.4K İzleyici</span>
+                <span>{Number(streamViewers).toLocaleString("tr-TR")} İzleyici</span>
               </div>
             )}
           </div>
@@ -137,7 +153,7 @@ export default function KickLiveSection({
                     />
                     <div>
                       <p className="text-xs font-bold text-white uppercase">{siteName}</p>
-                      <p className="text-[10px] text-gray-300">Rekabetçi Maçlar & Topluluk Yayını</p>
+                      <p className="text-[10px] text-gray-300">{streamTitle}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 text-white/80">

@@ -197,9 +197,18 @@ export default function Header({
           {/* Kick Status Indicator */}
           <button
             onClick={() => {
-              setIsStreamLive(!isStreamLive);
-              setActiveSection("home");
-              window.scrollTo({ top: 0, behavior: "smooth" });
+              if (currentUser?.role === "admin") {
+                setIsStreamLive(!isStreamLive);
+              } else {
+                // If stream is live, let them go straight to the player
+                setActiveSection("home");
+                setTimeout(() => {
+                  const element = document.getElementById("kick-stream");
+                  if (element) {
+                    element.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }
+                }, 100);
+              }
             }}
             id="kick-live-indicator-btn"
             className={`flex items-center space-x-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider transition duration-300 ${
