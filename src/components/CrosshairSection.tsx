@@ -396,7 +396,16 @@ export default function CrosshairSection({ translations, settings, siteName, pro
             {/* Real-time Preview Box */}
             <div className="relative w-10 h-10 rounded-xl bg-[#05060b] border border-white/[0.08] flex items-center justify-center overflow-hidden">
               <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:6px_6px]" />
-              {renderMiniCrosshair(item)}
+              {item.customIcon ? (
+                <img 
+                  src={item.customIcon} 
+                  alt={item.name} 
+                  className="w-full h-full object-cover rounded-xl"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                renderMiniCrosshair(item)
+              )}
             </div>
             
             <span className="text-sm font-bold text-gray-200 tracking-wide font-sans">

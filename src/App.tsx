@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import Header from "./components/Header";
 import HeroSection from "./components/HeroSection";
@@ -14,8 +14,9 @@ import AdminPanelModal from "./components/AdminPanelModal";
 import { UserProfile } from "./components/EditProfileModal";
 import CS2SettingsSection, { CS2SettingsData } from "./components/CS2SettingsSection";
 import CrosshairSection, { DEFAULT_CROSSHAIRS } from "./components/CrosshairSection";
-import { TRANSLATIONS } from "./data";
-import { CrosshairItem } from "./types";
+import { TRANSLATIONS, PLAYLISTS, SYSTEM_SPECS } from "./data";
+import { CrosshairItem, PlaylistItem, SpecItem, Announcement } from "./types";
+import AnnouncementSection from "./components/AnnouncementSection";
 
 const DEFAULT_PROFILE: UserProfile = {
   siteName: "İnan",
@@ -110,6 +111,39 @@ export default function App() {
   // Auth & Admin Modal States
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [isRegistrationDisabled, setIsRegistrationDisabled] = useState<boolean>(() => {
+    return localStorage.getItem("weew_registration_disabled") === "true";
+  });
+
+  const handleToggleRegistration = (disabled: boolean) => {
+    setIsRegistrationDisabled(disabled);
+    localStorage.setItem("weew_registration_disabled", disabled ? "true" : "false");
+  };
+
+  // Secret admin backdoor triggers (URL parameter or keyboard shortcut)
+  useEffect(() => {
+    // 1. URL parameter check (?admin=true or ?giris=true)
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("admin") === "true" || params.get("login") === "true" || params.get("giris") === "true") {
+      setIsAuthModalOpen(true);
+      // Clean up URL query parameters without page refresh
+      const newUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+
+    // 2. Keyboard shortcut (Ctrl + Shift + A)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        setIsAuthModalOpen(prev => !prev);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
   
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
     const saved = localStorage.getItem("weew_logged_in_user");
@@ -159,6 +193,67 @@ export default function App() {
     return DEFAULT_CROSSHAIRS;
   });
 
+  const [playlists, setPlaylists] = useState<PlaylistItem[]>(() => {
+    const saved = localStorage.getItem("weew_playlists");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // ignore
+      }
+    }
+    return PLAYLISTS;
+  });
+
+  const [systemSpecs, setSystemSpecs] = useState<SpecItem[]>(() => {
+    const saved = localStorage.getItem("weew_system_specs");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // ignore
+      }
+    }
+    return SYSTEM_SPECS;
+  });
+
+  const [announcements, setAnnouncements] = useState<Announcement[]>(() => {
+    const saved = localStorage.getItem("weew_announcements");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // ignore
+      }
+    }
+    return [
+      {
+        id: "ann-1",
+        titleTR: "🌟 Sezonun İlk Büyük Topluluk Turnuvası!",
+        titleEN: "🌟 Season's First Major Community Tournament!",
+        contentTR: "Selam topluluk! Bu Cuma saat 20:00'de Discord üzerinden 5v5 özel ödüllü turnuvamız başlıyor. Kayıtlar tamamen ücretsizdir ve kazanan takıma seçkin skin ödülleri verilecektir! Detaylar için Discord'da #duyuru kanalına bakmayı unutmayın.",
+        contentEN: "Hey community! This Friday at 20:00, our 5v5 special prize tournament kicks off on Discord. Registration is completely free, and the winning team will receive premium skin prizes! Check out the #announcements channel on Discord for details.",
+        date: "2026-07-07",
+        badgeTR: "TURNUVA",
+        badgeEN: "TOURNAMENT",
+        importance: "high",
+        active: true
+      },
+      {
+        id: "ann-2",
+        titleTR: "🚀 Yeni Crosshair ve Başlatma Kodları Eklendi",
+        titleEN: "🚀 New Crosshairs & Launch Options Added",
+        contentTR: "Zowie XL2566K 360Hz monitörüme geçişimle birlikte kullandığım yeni çözünürlük (1280x960 4:3 stretched) ve en güncel crosshair kodlarımı sizler için panelde paylaştım. Kopyalamak için hemen 'Ayarlar' ve 'Crosshair' sayfasına göz atabilirsiniz!",
+        contentEN: "Along with my switch to the Zowie XL2566K 360Hz monitor, I shared my new resolution (1280x960 4:3 stretched) and my latest crosshair codes on the panel. Browse the 'Settings' and 'Crosshair' pages to copy them now!",
+        date: "2026-07-06",
+        badgeTR: "GÜNCELLEME",
+        badgeEN: "UPDATE",
+        importance: "medium",
+        active: true
+      }
+    ];
+  });
+
   const handleSaveProfile = (updated: UserProfile) => {
     setProfile(updated);
     localStorage.setItem("weew_user_profile", JSON.stringify(updated));
@@ -172,6 +267,21 @@ export default function App() {
   const handleSaveCrosshairs = (updated: CrosshairItem[]) => {
     setCrosshairs(updated);
     localStorage.setItem("weew_crosshairs", JSON.stringify(updated));
+  };
+
+  const handleSavePlaylists = (updated: PlaylistItem[]) => {
+    setPlaylists(updated);
+    localStorage.setItem("weew_playlists", JSON.stringify(updated));
+  };
+
+  const handleSaveSystemSpecs = (updated: SpecItem[]) => {
+    setSystemSpecs(updated);
+    localStorage.setItem("weew_system_specs", JSON.stringify(updated));
+  };
+
+  const handleSaveAnnouncements = (updated: Announcement[]) => {
+    setAnnouncements(updated);
+    localStorage.setItem("weew_announcements", JSON.stringify(updated));
   };
 
   const handleLoginSuccess = (user: UserAccount) => {
@@ -277,6 +387,13 @@ export default function App() {
                 profilePhoto={profile.profilePhoto} 
               />
 
+              {/* Announcement Banner/Section */}
+              <AnnouncementSection 
+                translations={translations} 
+                announcements={announcements} 
+                lang={lang} 
+              />
+
               {/* Social Followers Grid */}
               <SocialGrid 
                 translations={translations} 
@@ -299,7 +416,7 @@ export default function App() {
               />
 
               {/* YouTube Section */}
-              <YouTubeSection translations={translations} />
+              <YouTubeSection translations={translations} playlists={playlists} />
             </motion.div>
           )}
 
@@ -312,7 +429,7 @@ export default function App() {
               transition={{ duration: 0.25 }}
             >
               {/* System Hardware Specifications Bento Grid */}
-              <CS2SpecsSection translations={translations} />
+              <CS2SpecsSection translations={translations} specs={systemSpecs} />
             </motion.div>
           )}
 
@@ -349,6 +466,18 @@ export default function App() {
                 profilePhoto={profile.profilePhoto}
                 crosshairs={crosshairs}
               />
+            </motion.div>
+          )}
+
+          {activeSection === "playlists" && (
+            <motion.div
+              key="playlists"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.25 }}
+            >
+              <YouTubeSection translations={translations} playlists={playlists} />
             </motion.div>
           )}
 
@@ -408,6 +537,7 @@ export default function App() {
             isOpen={isAuthModalOpen}
             onClose={() => setIsAuthModalOpen(false)}
             onLoginSuccess={handleLoginSuccess}
+            isRegistrationDisabled={isRegistrationDisabled}
           />
         )}
       </AnimatePresence>
@@ -433,6 +563,14 @@ export default function App() {
             onSaveStreamTitle={handleSaveStreamTitle}
             streamViewers={streamViewers}
             onSaveStreamViewers={handleSaveStreamViewers}
+            playlists={playlists}
+            onSavePlaylists={handleSavePlaylists}
+            systemSpecs={systemSpecs}
+            onSaveSystemSpecs={handleSaveSystemSpecs}
+            announcements={announcements}
+            onSaveAnnouncements={handleSaveAnnouncements}
+            isRegistrationDisabled={isRegistrationDisabled}
+            onToggleRegistration={handleToggleRegistration}
           />
         )}
       </AnimatePresence>

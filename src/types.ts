@@ -28,6 +28,7 @@ export interface FAQItem {
 }
 
 export interface PlaylistItem {
+  id?: string;
   title: string;
   videoCount: number;
   thumbnail: string;
@@ -127,5 +128,19 @@ export interface CrosshairItem {
   outline?: boolean;
   group: "main" | "liked";
   videoUrl?: string;
+  customIcon?: string;
+}
+
+export interface Announcement {
+  id: string;
+  titleTR: string;
+  titleEN: string;
+  contentTR: string;
+  contentEN: string;
+  date: string;
+  badgeTR?: string;
+  badgeEN?: string;
+  importance?: "high" | "medium" | "low";
+  active: boolean;
 }
 

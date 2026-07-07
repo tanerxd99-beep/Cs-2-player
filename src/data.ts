@@ -92,24 +92,28 @@ export const CROSSHAIR_CONSOLE = "cl_crosshairsize 2; cl_crosshairgap -2; cl_cro
 
 export const PLAYLISTS: PlaylistItem[] = [
   {
+    id: "playlist-1",
     title: "Faceit Maçlarım",
     videoCount: 24,
     thumbnail: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=600&auto=format&fit=crop",
     url: "https://youtube.com/playlist?list=PL_faceit"
   },
   {
+    id: "playlist-2",
     title: "Premier & MM Maçlarım",
     videoCount: 10,
     thumbnail: "https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=600&auto=format&fit=crop",
     url: "https://youtube.com/playlist?list=PL_premier"
   },
   {
+    id: "playlist-3",
     title: "Sıfırdan Global Yolculuğu",
     videoCount: 18,
     thumbnail: "https://images.unsplash.com/photo-1553481187-be93c21490a9?q=80&w=600&auto=format&fit=crop",
     url: "https://youtube.com/playlist?list=PL_global"
   },
   {
+    id: "playlist-4",
     title: "Klipler & En İyi Anlar",
     videoCount: 42,
     thumbnail: "https://images.unsplash.com/photo-1560253023-3ec5d502959f?q=80&w=600&auto=format&fit=crop",

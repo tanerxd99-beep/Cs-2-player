@@ -102,6 +102,11 @@ export default function Footer({
                 </button>
               </li>
               <li>
+                <button onClick={() => handleNavClick("playlists")} className="hover:text-white transition">
+                  {translations.playlistsSub}
+                </button>
+              </li>
+              <li>
                 <button onClick={() => handleNavClick("system")} className="hover:text-white transition">
                   {translations.navSystem}
                 </button>

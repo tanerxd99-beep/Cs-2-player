@@ -1,14 +1,14 @@
 import React from "react";
 import { motion } from "motion/react";
 import { Youtube, ExternalLink } from "lucide-react";
-import { PLAYLISTS } from "../data";
-import { TranslationDict } from "../types";
+import { TranslationDict, PlaylistItem } from "../types";
 
 interface YouTubeSectionProps {
   translations: TranslationDict;
+  playlists: PlaylistItem[];
 }
 
-export default function YouTubeSection({ translations }: YouTubeSectionProps) {
+export default function YouTubeSection({ translations, playlists }: YouTubeSectionProps) {
   return (
     <section id="youtube-section" className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative">
       <div className="absolute top-10 left-10 w-[250px] h-[250px] rounded-full cyan-glow pointer-events-none -z-10 opacity-30" />
@@ -29,7 +29,7 @@ export default function YouTubeSection({ translations }: YouTubeSectionProps) {
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
           id="playlists-grid"
         >
-          {PLAYLISTS.map((playlist, idx) => (
+          {playlists.map((playlist, idx) => (
             <motion.a
               key={playlist.title}
               href={playlist.url}

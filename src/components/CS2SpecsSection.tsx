@@ -1,14 +1,14 @@
 import React from "react";
 import { motion } from "motion/react";
 import { Monitor, Cpu, HardDrive, Keyboard, Mic, Layers } from "lucide-react";
-import { SYSTEM_SPECS } from "../data";
-import { TranslationDict } from "../types";
+import { SpecItem, TranslationDict } from "../types";
 
 interface CS2SpecsSectionProps {
   translations: TranslationDict;
+  specs: SpecItem[];
 }
 
-export default function CS2SpecsSection({ translations }: CS2SpecsSectionProps) {
+export default function CS2SpecsSection({ translations, specs }: CS2SpecsSectionProps) {
   
   const getSpecIcon = (category: string) => {
     const lowercaseCat = category.toLowerCase();
@@ -49,7 +49,7 @@ export default function CS2SpecsSection({ translations }: CS2SpecsSectionProps) 
         className="grid grid-cols-1 md:grid-cols-2 gap-4"
         id="specs-list-grid"
       >
-        {SYSTEM_SPECS.map((spec, idx) => (
+        {specs.map((spec, idx) => (
           <motion.div
             key={spec.category}
             initial={{ opacity: 0, y: 10 }}

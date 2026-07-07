@@ -13,9 +13,15 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLoginSuccess: (user: UserAccount) => void;
+  isRegistrationDisabled?: boolean;
 }
 
-export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModalProps) {
+export default function AuthModal({ 
+  isOpen, 
+  onClose, 
+  onLoginSuccess,
+  isRegistrationDisabled = false 
+}: AuthModalProps) {
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,6 +36,11 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
     e.preventDefault();
     setErrorMsg("");
     setSuccessMsg("");
+
+    if (activeTab === "register" && isRegistrationDisabled) {
+      setErrorMsg("Yeni üye kaydı kurucu tarafından geçici olarak kapatılmıştır.");
+      return;
+    }
 
     if (!email.trim() || !email.includes("@")) {
       setErrorMsg("Lütfen geçerli bir e-posta adresi giriniz.");
@@ -214,24 +225,6 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
           </button>
         </div>
 
-        {/* Quick Admin Access Helper banner */}
-        <div className="mb-4 rounded-2xl bg-purple-500/5 border border-purple-500/10 p-3 flex flex-col justify-between gap-1">
-          <span className="text-[10px] font-bold text-purple-300 uppercase tracking-wider block">
-            ⭐ Super Admin Kurucu Erişimi
-          </span>
-          <p className="text-[10px] text-gray-400 leading-normal">
-            Girişte <code className="text-purple-400 font-mono">iremsaltanat002001@gmail.com</code> e-postası otomatik olarak kurucu Super Admin yetkisini devralır.
-          </p>
-          <button
-            type="button"
-            onClick={prefillSuperAdmin}
-            className="text-[10px] font-bold text-left text-purple-400 hover:text-purple-300 hover:underline flex items-center gap-1 mt-1 uppercase"
-          >
-            <span>Admin Girişini Doldur</span>
-            <ArrowRight className="h-3 w-3" />
-          </button>
-        </div>
-
         {/* Alerts messages */}
         {errorMsg && (
           <div className="mb-4 flex items-center gap-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 text-xs font-semibold">
@@ -248,62 +241,88 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
         )}
 
         {/* Form Inputs */}
-        <form onSubmit={handleAction} className="space-y-4">
-          {activeTab === "register" && (
+        {activeTab === "register" && isRegistrationDisabled ? (
+          <div className="p-6 rounded-3xl bg-red-500/5 border border-red-500/10 text-center space-y-4">
+            <div className="mx-auto h-12 w-12 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center">
+              <Lock className="h-6 w-6 animate-pulse" />
+            </div>
+            <div className="space-y-1.5">
+              <h4 className="text-sm font-extrabold text-red-400 uppercase tracking-wider">KAYITLAR KAPATILMIŞTIR</h4>
+              <p className="text-[11px] text-gray-400 leading-normal uppercase font-semibold">
+                Sistem kurucusu yeni üye kayıtlarını geçici olarak durdurmuştur. Sadece kayıtlı kullanıcılar giriş yapabilir.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("login");
+                setErrorMsg("");
+                setSuccessMsg("");
+              }}
+              className="px-5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-[10px] font-black uppercase tracking-widest text-white transition flex items-center gap-1.5 mx-auto cursor-pointer"
+            >
+              <span>GİRİŞ YAP SAYFASINA DÖN</span>
+              <ArrowRight className="h-3 w-3" />
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleAction} className="space-y-4">
+            {activeTab === "register" && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <User className="h-3.5 w-3.5 text-purple-400" />
+                  İsim Soyisim
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Örn. İrem Saltanat"
+                  required
+                  className="w-full rounded-xl bg-[#151724] border border-white/5 px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"
+                />
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                <User className="h-3.5 w-3.5 text-purple-400" />
-                İsim Soyisim
+                <Mail className="h-3.5 w-3.5 text-purple-400" />
+                E-Posta Adresi
               </label>
               <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Örn. İrem Saltanat"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="isim@domain.com"
                 required
                 className="w-full rounded-xl bg-[#151724] border border-white/5 px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"
               />
             </div>
-          )}
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Mail className="h-3.5 w-3.5 text-purple-400" />
-              E-Posta Adresi
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="isim@domain.com"
-              required
-              className="w-full rounded-xl bg-[#151724] border border-white/5 px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"
-            />
-          </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Lock className="h-3.5 w-3.5 text-purple-400" />
+                Şifre
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="•••••"
+                required
+                className="w-full rounded-xl bg-[#151724] border border-white/5 px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"
+              />
+            </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Lock className="h-3.5 w-3.5 text-purple-400" />
-              Şifre
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="•••••"
-              required
-              className="w-full rounded-xl bg-[#151724] border border-white/5 px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"
-            />
-          </div>
-
-          {/* Action button */}
-          <button
-            type="submit"
-            className="w-full rounded-xl bg-purple-600 hover:bg-purple-500 py-3 text-xs font-black uppercase tracking-widest text-white transition shadow-[0_4px_15px_rgba(168,85,247,0.3)] mt-6 flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <span>{activeTab === "login" ? "GİRİŞ YAP" : "KAYIT İŞLEMİNİ TAMAMLA"}</span>
-          </button>
-        </form>
+            {/* Action button */}
+            <button
+              type="submit"
+              className="w-full rounded-xl bg-purple-600 hover:bg-purple-500 py-3 text-xs font-black uppercase tracking-widest text-white transition shadow-[0_4px_15px_rgba(168,85,247,0.3)] mt-6 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>{activeTab === "login" ? "GİRİŞ YAP" : "KAYIT İŞLEMİNİ TAMAMLA"}</span>
+            </button>
+          </form>
+        )}
       </motion.div>
     </div>
   );
