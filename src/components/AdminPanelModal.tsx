@@ -1,0 +1,787 @@
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { 
+  X, Save, Image, User, Shield, Users, Mail, Tv, 
+  Settings2, Trash2, Check, RefreshCw, MessageSquare, AlertCircle, Award,
+  Upload, Smartphone
+} from "lucide-react";
+import { UserProfile } from "./EditProfileModal";
+import { UserAccount } from "./AuthModal";
+
+interface AdminPanelModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  profile: UserProfile;
+  onSaveProfile: (updated: UserProfile) => void;
+  isStreamLive: boolean;
+  setIsStreamLive: (live: boolean) => void;
+  currentUser: UserAccount | null;
+}
+
+interface MessageInboxItem {
+  id: string;
+  name: string;
+  email: string;
+  message: string;
+  date: string;
+}
+
+const AVATAR_PRESETS = [
+  "https://images.unsplash.com/photo-1566492031773-4f4e44671857?q=80&w=200&auto=format&fit=crop", // Default Man
+  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop", // Woman
+  "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=200&auto=format&fit=crop", // Neon Abstract
+  "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=200&auto=format&fit=crop"  // Gamepad/Setup
+];
+
+export default function AdminPanelModal({ 
+  isOpen, 
+  onClose, 
+  profile, 
+  onSaveProfile, 
+  isStreamLive, 
+  setIsStreamLive,
+  currentUser
+}: AdminPanelModalProps) {
+  const [activeSubTab, setActiveSubTab] = useState<"profile" | "inbox" | "users" | "stream">("profile");
+  const [formData, setFormData] = useState<UserProfile>({ ...profile });
+  const [savedSuccess, setSavedSuccess] = useState(false);
+
+  // Loaded dynamically
+  const [messages, setMessages] = useState<MessageInboxItem[]>([]);
+  const [registeredUsers, setRegisteredUsers] = useState<UserAccount[]>([]);
+
+  // Drag and Drop Upload States
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processFile(file);
+    }
+  };
+
+  const processFile = (file: File) => {
+    setUploadError("");
+    if (!file.type.startsWith("image/")) {
+      setUploadError("Lütfen geçerli bir görsel dosyası seçin (PNG, JPG, WEBP vb.).");
+      return;
+    }
+    // Limit file size to 3MB for localStorage base64 safety
+    if (file.size > 3 * 1024 * 1024) {
+      setUploadError("Görsel boyutu çok büyük (Maksimum 3MB). Telefon kamerası fotoğrafları için ekran görüntüsü alıp yüklemeyi deneyebilirsiniz.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      handleChange("profilePhoto", base64String);
+    };
+    reader.onerror = () => {
+      setUploadError("Dosya okunurken bir hata oluştu.");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processFile(file);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      loadMessages();
+      loadRegisteredUsers();
+    }
+  }, [isOpen]);
+
+  const loadMessages = () => {
+    const raw = localStorage.getItem("weew_messages");
+    if (raw) {
+      try {
+        setMessages(JSON.parse(raw));
+      } catch (e) {
+        setMessages([]);
+      }
+    } else {
+      // Seed a couple of friendly demo messages if inbox is completely empty
+      const demoMessages: MessageInboxItem[] = [
+        {
+          id: "msg-1",
+          name: "Metehan Yıldız",
+          email: "mete@gmail.com",
+          message: "Yeni yayın planı ve CS2 turnuvası ne zaman başlıyor? Discord üzerinden de sordum, heyecanla bekliyoruz!",
+          date: new Date(Date.now() - 3600000 * 4).toLocaleString("tr-TR")
+        },
+        {
+          id: "msg-2",
+          name: "Melis Kaya",
+          email: "melis.kaya@outlook.com",
+          message: "Harika bir web sitesi tasarımı olmuş! Sponsorluk ve ekipman iş birliği için detaylı bir e-posta gönderdim, bakabilirsen sevinirim.",
+          date: new Date(Date.now() - 3600000 * 24).toLocaleString("tr-TR")
+        }
+      ];
+      localStorage.setItem("weew_messages", JSON.stringify(demoMessages));
+      setMessages(demoMessages);
+    }
+  };
+
+  const loadRegisteredUsers = () => {
+    const raw = localStorage.getItem("weew_registered_users");
+    let usersList: UserAccount[] = [];
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        usersList = Object.entries(parsed).map(([email, info]: any) => ({
+          email,
+          name: info.name,
+          role: info.role,
+          createdAt: info.createdAt || new Date().toISOString()
+        }));
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    // Ensure our super admin is always represented on the list
+    const superAdminEmail = "iremsaltanat002001@gmail.com";
+    if (!usersList.some(u => u.email === superAdminEmail)) {
+      usersList.unshift({
+        email: superAdminEmail,
+        name: "İrem Saltanat",
+        role: "admin",
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    setRegisteredUsers(usersList);
+  };
+
+  if (!isOpen) return null;
+
+  const handleChange = (field: keyof UserProfile, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleProfileSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSaveProfile(formData);
+    setSavedSuccess(true);
+    setTimeout(() => {
+      setSavedSuccess(false);
+    }, 1500);
+  };
+
+  const handleDeleteMessage = (id: string) => {
+    const updated = messages.filter(m => m.id !== id);
+    setMessages(updated);
+    localStorage.setItem("weew_messages", JSON.stringify(updated));
+  };
+
+  const handleDeleteUser = (emailToDelete: string) => {
+    if (emailToDelete === "iremsaltanat002001@gmail.com") {
+      alert("Bu kullanıcının kurucu adminliği elinden alınamaz veya silinemez!");
+      return;
+    }
+
+    const raw = localStorage.getItem("weew_registered_users");
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        delete parsed[emailToDelete];
+        localStorage.setItem("weew_registered_users", JSON.stringify(parsed));
+        loadRegisteredUsers();
+      } catch (e) {
+        // ignore
+      }
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div className="fixed inset-0 bg-black/90 backdrop-blur-md" onClick={onClose} />
+
+      {/* Main Admin Dashboard Modal */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.98, y: 15 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.98, y: 15 }}
+        className="relative w-full max-w-4xl rounded-3xl border border-purple-500/10 bg-[#0c0d16] shadow-2xl z-10 flex flex-col md:flex-row overflow-hidden max-h-[85vh] text-left"
+      >
+        
+        {/* Left Sidebar Navigation */}
+        <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-white/5 bg-[#0f111c] p-5 flex flex-col justify-between">
+          <div className="space-y-6">
+            <div>
+              <div className="flex items-center space-x-2 text-purple-400 mb-1">
+                <Shield className="h-5 w-5" />
+                <span className="font-mono text-xs font-bold uppercase tracking-wider">Super Admin</span>
+              </div>
+              <h3 className="font-display text-lg font-extrabold text-white uppercase tracking-tight">
+                YÖNETİM PANELİ
+              </h3>
+              <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider mt-1">
+                Hoş geldin, {currentUser?.name || "İrem Saltanat"}
+              </p>
+            </div>
+
+            {/* Nav Buttons */}
+            <nav className="space-y-1">
+              <button
+                onClick={() => { setActiveSubTab("profile"); setSavedSuccess(false); }}
+                className={`w-full flex items-center space-x-3 rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-wider transition ${
+                  activeSubTab === "profile"
+                    ? "bg-purple-600/15 border border-purple-500/30 text-purple-400"
+                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <Settings2 className="h-4 w-4" />
+                <span>Siteyi Düzenle</span>
+              </button>
+
+              <button
+                onClick={() => { setActiveSubTab("inbox"); setSavedSuccess(false); }}
+                className={`w-full flex items-center justify-between rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-wider transition ${
+                  activeSubTab === "inbox"
+                    ? "bg-purple-600/15 border border-purple-500/30 text-purple-400"
+                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <Mail className="h-4 w-4" />
+                  <span>Gelen Mesajlar</span>
+                </div>
+                {messages.length > 0 && (
+                  <span className="bg-purple-600 text-white rounded-full px-2 py-0.5 text-[10px] font-black">
+                    {messages.length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => { setActiveSubTab("users"); setSavedSuccess(false); }}
+                className={`w-full flex items-center space-x-3 rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-wider transition ${
+                  activeSubTab === "users"
+                    ? "bg-purple-600/15 border border-purple-500/30 text-purple-400"
+                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <Users className="h-4 w-4" />
+                <span>Üye Listesi</span>
+              </button>
+
+              <button
+                onClick={() => { setActiveSubTab("stream"); setSavedSuccess(false); }}
+                className={`w-full flex items-center space-x-3 rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-wider transition ${
+                  activeSubTab === "stream"
+                    ? "bg-purple-600/15 border border-purple-500/30 text-purple-400"
+                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <Tv className="h-4 w-4" />
+                <span>Yayın Durumu</span>
+              </button>
+            </nav>
+          </div>
+
+          <div className="hidden md:block pt-4 border-t border-white/5">
+            <span className="text-[9px] font-mono text-gray-500 uppercase tracking-widest block">
+              Sistem Durumu
+            </span>
+            <div className="flex items-center space-x-2 mt-1">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+              <span className="font-mono text-[10px] text-emerald-400 uppercase font-black">Online</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Main Content Panel */}
+        <div className="flex-1 p-6 sm:p-8 flex flex-col justify-between overflow-y-auto max-h-[70vh] md:max-h-none custom-scrollbar">
+          
+          <div className="flex-1">
+            {/* Header top row */}
+            <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-6">
+              <h2 className="font-display text-xl font-bold text-white uppercase tracking-wider">
+                {activeSubTab === "profile" && "Portalı Düzenle & Özelleştir"}
+                {activeSubTab === "inbox" && `Gelen Mesajlar Kutusu (${messages.length})`}
+                {activeSubTab === "users" && `Sitede Kayıtlı Üyeler (${registeredUsers.length})`}
+                {activeSubTab === "stream" && "Canlı Yayın ve Gösterge Kontrolü"}
+              </h2>
+              <button
+                onClick={onClose}
+                className="rounded-lg border border-white/5 p-1.5 text-gray-400 hover:text-white hover:bg-white/5 transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Notification alert banner */}
+            {savedSuccess && (
+              <div className="mb-6 flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-3 text-xs font-semibold">
+                <Check className="h-4 w-4" />
+                <span>Değişiklikler başarıyla kaydedildi ve tüm sayfaya uygulandı!</span>
+              </div>
+            )}
+
+            {/* Tab: Profile editor */}
+            {activeSubTab === "profile" && (
+              <form onSubmit={handleProfileSubmit} className="space-y-6">
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+                      <User className="h-3.5 w-3.5 text-purple-400" />
+                      Logo İsmi (Site Name)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.siteName}
+                      onChange={(e) => handleChange("siteName", e.target.value)}
+                      placeholder="Weew"
+                      className="w-full rounded-xl bg-[#131522] border border-white/5 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+                      <Image className="h-3.5 w-3.5 text-purple-400" />
+                      Profil Fotoğrafı URL
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.profilePhoto}
+                      onChange={(e) => handleChange("profilePhoto", e.target.value)}
+                      placeholder="Resim URL'si girin"
+                      className="w-full rounded-xl bg-[#131522] border border-white/5 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+                </div>
+
+                {/* File Upload Zone (Supports both Drag-and-Drop and smartphone selection) */}
+                <div className="space-y-2">
+                  <span className="text-xs font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+                    <Smartphone className="h-3.5 w-3.5 text-purple-400" />
+                    Telefondan veya Bilgisayardan Fotoğraf Yükle
+                  </span>
+                  
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className={`border-2 border-dashed rounded-2xl p-5 text-center transition-all duration-200 cursor-pointer relative ${
+                      isDragging
+                        ? "border-purple-500 bg-purple-500/10 scale-[1.01]"
+                        : "border-white/10 bg-[#11121d] hover:border-purple-500/30 hover:bg-purple-500/5"
+                    }`}
+                    onClick={() => document.getElementById("mobile-file-upload-input")?.click()}
+                  >
+                    <input
+                      id="mobile-file-upload-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+
+                    <div className="flex flex-col items-center justify-center space-y-2">
+                      <div className="h-10 w-10 rounded-full bg-purple-600/10 border border-purple-500/20 text-purple-400 flex items-center justify-center">
+                        <Upload className="h-5 w-5" />
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <p className="text-xs sm:text-sm font-bold text-white uppercase tracking-wide">
+                          Dosya Seçmek İçin Dokunun veya Sürükleyin
+                        </p>
+                        <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">
+                          PNG, JPG, WEBP • Maksimum 3MB
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Show small live preview inside the upload box */}
+                    {formData.profilePhoto && formData.profilePhoto.startsWith("data:") && (
+                      <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg border border-white/5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#00e676]" />
+                        <span className="text-[9px] font-mono font-bold text-[#00e676] uppercase">Görsel Yüklendi</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {uploadError && (
+                    <p className="text-xs text-red-400 font-semibold uppercase tracking-wider flex items-center gap-1">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      {uploadError}
+                    </p>
+                  )}
+                </div>
+
+                {/* Profile Photo Presets */}
+                <div className="space-y-2">
+                  <span className="text-[10px] font-mono text-gray-500 font-bold uppercase tracking-wider block">
+                    Hazır Profil Fotoğrafı Seçenekleri
+                  </span>
+                  <div className="flex gap-4">
+                    {AVATAR_PRESETS.map((url, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleChange("profilePhoto", url)}
+                        className={`relative h-11 w-11 rounded-full overflow-hidden border-2 transition ${
+                          formData.profilePhoto === url ? "border-purple-500 scale-105" : "border-transparent opacity-60 hover:opacity-100"
+                        }`}
+                      >
+                        <img src={url} alt={`Preset ${idx}`} className="h-full w-full object-cover" />
+                        {formData.profilePhoto === url && (
+                          <div className="absolute inset-0 bg-purple-600/30 flex items-center justify-center">
+                            <Check className="h-4 w-4 text-white font-black" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Biography details */}
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wide">
+                      Hakkımda / Bio (Türkçe)
+                    </label>
+                    <textarea
+                      value={formData.bioTR}
+                      onChange={(e) => handleChange("bioTR", e.target.value)}
+                      rows={3}
+                      className="w-full rounded-xl bg-[#131522] border border-white/5 px-4 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-purple-500 resize-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wide">
+                      About Me / Bio (English)
+                    </label>
+                    <textarea
+                      value={formData.bioEN}
+                      onChange={(e) => handleChange("bioEN", e.target.value)}
+                      rows={3}
+                      className="w-full rounded-xl bg-[#131522] border border-white/5 px-4 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-purple-500 resize-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Social media inputs */}
+                <div className="border-t border-white/5 pt-4 space-y-4">
+                  <span className="text-xs font-bold text-purple-400 uppercase tracking-wider block">
+                    Sosyal Medya Linkleri
+                  </span>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Kick */}
+                    <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-2">
+                      <span className="text-[10px] font-bold text-[#00e676] block uppercase tracking-wider">KICK KANALI</span>
+                      <input
+                        type="text"
+                        value={formData.kickUsername}
+                        onChange={(e) => handleChange("kickUsername", e.target.value)}
+                        placeholder="Kullanıcı adı"
+                        className="w-full rounded-lg bg-[#0c0d16] border border-white/5 px-3 py-1.5 text-xs text-white"
+                      />
+                      <input
+                        type="text"
+                        value={formData.kickUrl}
+                        onChange={(e) => handleChange("kickUrl", e.target.value)}
+                        placeholder="Link"
+                        className="w-full rounded-lg bg-[#0c0d16] border border-white/5 px-3 py-1.5 text-xs text-white"
+                      />
+                    </div>
+
+                    {/* Instagram */}
+                    <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-2">
+                      <span className="text-[10px] font-bold text-[#e1306c] block uppercase tracking-wider">INSTAGRAM</span>
+                      <input
+                        type="text"
+                        value={formData.instagramUsername}
+                        onChange={(e) => handleChange("instagramUsername", e.target.value)}
+                        placeholder="Kullanıcı adı"
+                        className="w-full rounded-lg bg-[#0c0d16] border border-white/5 px-3 py-1.5 text-xs text-white"
+                      />
+                      <input
+                        type="text"
+                        value={formData.instagramUrl}
+                        onChange={(e) => handleChange("instagramUrl", e.target.value)}
+                        placeholder="Link"
+                        className="w-full rounded-lg bg-[#0c0d16] border border-white/5 px-3 py-1.5 text-xs text-white"
+                      />
+                    </div>
+
+                    {/* YouTube */}
+                    <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-2">
+                      <span className="text-[10px] font-bold text-red-500 block uppercase tracking-wider">YOUTUBE</span>
+                      <input
+                        type="text"
+                        value={formData.youtubeUsername}
+                        onChange={(e) => handleChange("youtubeUsername", e.target.value)}
+                        placeholder="Kullanıcı adı"
+                        className="w-full rounded-lg bg-[#0c0d16] border border-white/5 px-3 py-1.5 text-xs text-white"
+                      />
+                      <input
+                        type="text"
+                        value={formData.youtubeUrl}
+                        onChange={(e) => handleChange("youtubeUrl", e.target.value)}
+                        placeholder="Link"
+                        className="w-full rounded-lg bg-[#0c0d16] border border-white/5 px-3 py-1.5 text-xs text-white"
+                      />
+                    </div>
+
+                    {/* TikTok */}
+                    <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-2">
+                      <span className="text-[10px] font-bold text-cyan-400 block uppercase tracking-wider">TIKTOK</span>
+                      <input
+                        type="text"
+                        value={formData.tiktokUsername}
+                        onChange={(e) => handleChange("tiktokUsername", e.target.value)}
+                        placeholder="Kullanıcı adı"
+                        className="w-full rounded-lg bg-[#0c0d16] border border-white/5 px-3 py-1.5 text-xs text-white"
+                      />
+                      <input
+                        type="text"
+                        value={formData.tiktokUrl}
+                        onChange={(e) => handleChange("tiktokUrl", e.target.value)}
+                        placeholder="Link"
+                        className="w-full rounded-lg bg-[#0c0d16] border border-white/5 px-3 py-1.5 text-xs text-white"
+                      />
+                    </div>
+
+                    {/* Discord */}
+                    <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-2 sm:col-span-2">
+                      <span className="text-[10px] font-bold text-indigo-400 block uppercase tracking-wider">DISCORD SUNUCUSU</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <input
+                          type="text"
+                          value={formData.discordUsername}
+                          onChange={(e) => handleChange("discordUsername", e.target.value)}
+                          placeholder="Etiket / İsim"
+                          className="w-full rounded-lg bg-[#0c0d16] border border-white/5 px-3 py-1.5 text-xs text-white"
+                        />
+                        <input
+                          type="text"
+                          value={formData.discordUrl}
+                          onChange={(e) => handleChange("discordUrl", e.target.value)}
+                          placeholder="Davet Linki"
+                          className="w-full rounded-lg bg-[#0c0d16] border border-white/5 px-3 py-1.5 text-xs text-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4">
+                  <button
+                    type="submit"
+                    className="rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 px-6 text-xs uppercase tracking-widest transition flex items-center gap-1.5 shadow-[0_4px_15px_rgba(168,85,247,0.3)] cursor-pointer"
+                  >
+                    <Save className="h-4 w-4" />
+                    <span>Ayarları Kaydet</span>
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Tab: Message Inbox */}
+            {activeSubTab === "inbox" && (
+              <div className="space-y-4">
+                {messages.length === 0 ? (
+                  <div className="text-center py-12 bg-white/5 border border-white/5 rounded-3xl flex flex-col items-center">
+                    <MessageSquare className="h-10 w-10 text-gray-500 mb-3" />
+                    <p className="text-sm text-gray-400 font-bold uppercase tracking-wider">Gelen kutusu boş</p>
+                    <p className="text-xs text-gray-500 mt-1">İletişim formundan gönderilen mesajlar burada listelenir.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[50vh] overflow-y-auto custom-scrollbar pr-1">
+                    {messages.map((msg) => (
+                      <div 
+                        key={msg.id}
+                        className="p-4 rounded-2xl bg-white/5 border border-white/5 relative group hover:border-purple-500/30 transition"
+                      >
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-2">
+                          <div>
+                            <span className="text-sm font-extrabold text-white uppercase tracking-tight block">
+                              {msg.name}
+                            </span>
+                            <span className="text-xs text-purple-400 font-mono">
+                              {msg.email}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono text-gray-500 font-bold uppercase shrink-0">
+                            {msg.date}
+                          </span>
+                        </div>
+                        <p className="text-xs sm:text-sm text-gray-300 bg-black/20 p-3 rounded-xl border border-white/5 leading-relaxed">
+                          {msg.message}
+                        </p>
+
+                        <button
+                          onClick={() => handleDeleteMessage(msg.id)}
+                          className="absolute bottom-4 right-4 h-8 w-8 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition border border-red-500/20"
+                          title="Mesajı Sil"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Tab: Users list */}
+            {activeSubTab === "users" && (
+              <div className="space-y-4">
+                <div className="p-3.5 rounded-2xl bg-purple-500/5 border border-purple-500/10 text-[11px] text-purple-300 leading-normal font-medium uppercase tracking-wide">
+                  ⚠️ <span className="font-extrabold">Kurucu Hakları Korumalıdır:</span> iremsaltanat002001@gmail.com e-posta adresine ait kurucu adminlik statüsü sistem tarafından kilitlenmiştir ve hiçbir koşulda kaldırılamaz.
+                </div>
+
+                <div className="rounded-3xl border border-white/5 overflow-hidden bg-black/20">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="bg-white/5 border-b border-white/5 text-[10px] font-bold uppercase text-gray-400 tracking-wider">
+                        <th className="p-4">Kullanıcı Adı</th>
+                        <th className="p-4">E-posta</th>
+                        <th className="p-4">Rol / Yetki</th>
+                        <th className="p-4 text-right">Eylemler</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5 font-semibold">
+                      {registeredUsers.map((u) => {
+                        const isPrimaryAdmin = u.email === "iremsaltanat002001@gmail.com";
+                        return (
+                          <tr key={u.email} className="hover:bg-white/5 transition">
+                            <td className="p-4 text-white uppercase">{u.name}</td>
+                            <td className="p-4 text-purple-400 font-mono text-[11px]">{u.email}</td>
+                            <td className="p-4">
+                              {isPrimaryAdmin ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-500/20 shadow-[0_0_8px_rgba(245,158,11,0.2)]">
+                                  <Award className="h-3 w-3" />
+                                  <span>KURUCU ADMIN</span>
+                                </span>
+                              ) : u.role === "admin" ? (
+                                <span className="rounded-full bg-purple-500/10 px-2.5 py-0.5 text-[10px] font-bold text-purple-400 border border-purple-500/20">
+                                  ADMIN
+                                </span>
+                              ) : (
+                                <span className="rounded-full bg-white/5 px-2.5 py-0.5 text-[10px] font-bold text-gray-400">
+                                  ÜYE / İZLEYİCİ
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-4 text-right">
+                              {isPrimaryAdmin ? (
+                                <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest italic">Kilitli</span>
+                              ) : (
+                                <button
+                                  onClick={() => handleDeleteUser(u.email)}
+                                  className="h-7 w-7 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white inline-flex items-center justify-center transition border border-red-500/20"
+                                  title="Üyeliği Kaldır"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Tab: Stream manager */}
+            {activeSubTab === "stream" && (
+              <div className="space-y-6">
+                <div className="p-6 rounded-3xl bg-white/5 border border-white/5 flex flex-col sm:flex-row justify-between items-center gap-4">
+                  <div>
+                    <h3 className="font-display text-lg font-bold text-white uppercase tracking-wider mb-1">
+                      KICK YAYIN DURUMU
+                    </h3>
+                    <p className="text-xs text-gray-400 font-medium">
+                      Ana sayfadaki canlı yayın simülasyonunu ve göstergeleri anlık kontrol edin.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsStreamLive(!isStreamLive)}
+                    className={`rounded-2xl px-6 py-3 text-xs font-black uppercase tracking-widest transition duration-300 cursor-pointer ${
+                      isStreamLive 
+                        ? "bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]" 
+                        : "bg-[#00e676] hover:bg-[#00c853] text-black shadow-[0_0_15px_rgba(0,230,118,0.4)]"
+                    }`}
+                  >
+                    {isStreamLive ? "YAYINI KAPAT (OFFLINE YAP)" : "YAYINI BAŞLAT (LIVE YAP)"}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-5 rounded-3xl bg-white/5 border border-white/5">
+                    <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest block mb-2">Canlı Yayın Bilgisi</span>
+                    <div className="space-y-1.5">
+                      <span className="text-xs font-bold text-gray-400 block uppercase">Simüle Edilen Kategori</span>
+                      <div className="text-sm text-white font-extrabold bg-[#0c0d16] p-3 rounded-xl border border-white/5">
+                        Counter-Strike 2
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-5 rounded-3xl bg-white/5 border border-white/5">
+                    <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest block mb-2">Hızlı Metrikler</span>
+                    <div className="grid grid-cols-2 gap-3 text-center">
+                      <div className="bg-[#0c0d16] p-3 rounded-xl border border-white/5">
+                        <span className="text-[10px] text-gray-500 font-bold block uppercase">İzleyici</span>
+                        <span className="text-sm text-white font-black">{isStreamLive ? "1,245" : "0"}</span>
+                      </div>
+                      <div className="bg-[#0c0d16] p-3 rounded-xl border border-white/5">
+                        <span className="text-[10px] text-gray-500 font-bold block uppercase">Takipçi</span>
+                        <span className="text-sm text-white font-black">23,450</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          </div>
+
+          {/* Footer of modal */}
+          <div className="border-t border-white/5 pt-4 mt-8 flex justify-end">
+            <button
+              onClick={onClose}
+              className="rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition"
+            >
+              Kapat
+            </button>
+          </div>
+
+        </div>
+
+      </motion.div>
+    </div>
+  );
+}
