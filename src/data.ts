@@ -4,8 +4,8 @@ export const SOCIAL_ITEMS: SocialItem[] = [
   {
     id: "kick",
     name: "Kick",
-    username: "/talimera",
-    url: "https://kick.com/talimera",
+    username: "/inan",
+    url: "https://kick.com/inan",
     iconName: "Tv",
     themeColor: "bg-[#00e676]/10 text-[#00e676] border-[#00e676]/20",
     hoverColor: "hover:border-[#00e676] hover:bg-[#00e676]/20 hover:shadow-[0_0_15px_rgba(0,230,118,0.3)]"
@@ -13,8 +13,8 @@ export const SOCIAL_ITEMS: SocialItem[] = [
   {
     id: "instagram",
     name: "Instagram",
-    username: "@talimeraa",
-    url: "https://instagram.com/talimeraa",
+    username: "@inan",
+    url: "https://instagram.com/inan",
     iconName: "Instagram",
     themeColor: "bg-[#e1306c]/10 text-[#e1306c] border-[#e1306c]/20",
     hoverColor: "hover:border-[#e1306c] hover:bg-[#e1306c]/20 hover:shadow-[0_0_15px_rgba(225,48,108,0.3)]"
@@ -22,8 +22,8 @@ export const SOCIAL_ITEMS: SocialItem[] = [
   {
     id: "youtube",
     name: "YouTube",
-    username: "@talimera",
-    url: "https://youtube.com/@talimera",
+    username: "@inan",
+    url: "https://youtube.com/@inan",
     iconName: "Youtube",
     themeColor: "bg-[#ff0000]/10 text-[#ff0000] border-[#ff0000]/20",
     hoverColor: "hover:border-[#ff0000] hover:bg-[#ff0000]/20 hover:shadow-[0_0_15px_rgba(255,0,0,0.3)]"
@@ -31,8 +31,8 @@ export const SOCIAL_ITEMS: SocialItem[] = [
   {
     id: "tiktok",
     name: "TikTok",
-    username: "@talimeraa",
-    url: "https://tiktok.com/@talimeraa",
+    username: "@inan",
+    url: "https://tiktok.com/@inan",
     iconName: "Video",
     themeColor: "bg-[#00f2fe]/10 text-white border-white/10",
     hoverColor: "hover:border-white hover:bg-white/10 hover:shadow-[0_0_15px_rgba(255,255,255,0.2)]"
@@ -41,7 +41,7 @@ export const SOCIAL_ITEMS: SocialItem[] = [
     id: "discord",
     name: "Discord",
     username: "Sunucuya Katıl",
-    url: "https://discord.gg/talimera",
+    url: "https://discord.gg/inan",
     iconName: "MessageSquare",
     themeColor: "bg-[#5865f2]/10 text-[#5865f2] border-[#5865f2]/20",
     hoverColor: "hover:border-[#5865f2] hover:bg-[#5865f2]/20 hover:shadow-[0_0_15px_rgba(88,101,242,0.3)]"
@@ -192,7 +192,7 @@ export const TRANSLATIONS: Record<"TR" | "EN", TranslationDict> = {
     kickChatTitle: "Canlı Yayın Sohbet Simülatörü",
     kickJoinChat: "Sohbete Katıl",
     kickSendMessage: "Mesaj gönder...",
-    kickStreamStatusText: "Talimera çevrimdışı",
+    kickStreamStatusText: "İnan çevrimdışı",
     
     shortsTitle: "YOUTUBE SHORTS",
     shortsSub: "Son Paylaşımlar",
@@ -204,8 +204,8 @@ export const TRANSLATIONS: Record<"TR" | "EN", TranslationDict> = {
     playlistsButton: "Oynatma listesinin tamamını görüntüle",
     
     aboutTitle: "HAKKIMIZDA",
-    aboutSub: "Talimera Kimdir?",
-    aboutBio: "Selamlar! Ben Talimera. CS2 arenasında rekabetçi maçlar oynayan, güncel taktikleri inceleyen ve ekipman testleri yapan bir yayıncı ve içerik üreticisiyim. Yayınlarımda genellikle yüksek seviyeli Faceit maçları, izleyici lobileri ve topluluk turnuvaları düzenliyorum. Sıkı dostlukların ve eğlencenin olduğu topluluğumuza hoş geldin!",
+    aboutSub: "İnan Kimdir?",
+    aboutBio: "Selamlar! Ben İnan. CS2 arenasında rekabetçi maçlar oynayan, güncel taktikleri inceleyen ve ekipman testleri yapan bir yayıncı ve içerik üreticisiyim. Yayınlarımda genellikle yüksek seviyeli Faceit maçları, izleyici lobileri ve topluluk turnuvaları düzenliyorum. Sıkı dostlukların ve eğlencenin olduğu topluluğumuza hoş geldin!",
     aboutStatsTitle: "Yayın İstatistikleri",
     aboutFavGames: "Favori Oyunlar",
     
@@ -263,7 +263,7 @@ export const TRANSLATIONS: Record<"TR" | "EN", TranslationDict> = {
     kickChatTitle: "Live Stream Chat Simulator",
     kickJoinChat: "Join the Chat",
     kickSendMessage: "Send a message...",
-    kickStreamStatusText: "Talimera is offline",
+    kickStreamStatusText: "İnan is offline",
     
     shortsTitle: "YOUTUBE SHORTS",
     shortsSub: "Recent Uploads",
@@ -275,8 +275,8 @@ export const TRANSLATIONS: Record<"TR" | "EN", TranslationDict> = {
     playlistsButton: "View entire playlist",
     
     aboutTitle: "ABOUT ME",
-    aboutSub: "Who is Talimera?",
-    aboutBio: "Hello! I am Talimera. I am a streamer and content creator who plays competitive matches in the CS2 arena, reviews modern tactics, and tests high-end hardware. My broadcasts usually feature high-level Faceit matches, viewer lobbies, and community tournaments. Welcome to our gaming community!",
+    aboutSub: "Who is İnan?",
+    aboutBio: "Hello! I am İnan. I am a streamer and content creator who plays competitive matches in the CS2 arena, reviews modern tactics, and tests high-end hardware. My broadcasts usually feature high-level Faceit matches, viewer lobbies, and community tournaments. Welcome to our gaming community!",
     aboutStatsTitle: "Stream Stats",
     aboutFavGames: "Favorite Games",
     

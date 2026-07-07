@@ -114,3 +114,18 @@ export interface TranslationDict {
   footerOther: string;
   footerRights: string;
 }
+
+export interface CrosshairItem {
+  id: string;
+  name: string;
+  code: string;
+  type: "small" | "regular" | "large" | "thick" | "dot" | "plus" | "dot-cross";
+  color: string;
+  size?: number;
+  gap?: number;
+  thickness?: number;
+  outline?: boolean;
+  group: "main" | "liked";
+  videoUrl?: string;
+}
+

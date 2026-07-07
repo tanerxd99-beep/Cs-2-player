@@ -92,6 +92,16 @@ export default function Footer({
                 </button>
               </li>
               <li>
+                <button onClick={() => handleNavClick("settings")} className="hover:text-white transition">
+                  {translations.navSettings}
+                </button>
+              </li>
+              <li>
+                <button onClick={() => handleNavClick("crosshair")} className="hover:text-white transition">
+                  {translations.navCrosshair || "Crosshair"}
+                </button>
+              </li>
+              <li>
                 <button onClick={() => handleNavClick("system")} className="hover:text-white transition">
                   {translations.navSystem}
                 </button>

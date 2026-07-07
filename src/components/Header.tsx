@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Menu, X, Globe, ChevronDown, Tv, Home, Monitor, User, Mail, LogIn, LogOut, Shield } from "lucide-react";
+import { Menu, X, Globe, ChevronDown, Tv, Home, Monitor, User, Mail, LogIn, LogOut, Shield, Settings2, Crosshair } from "lucide-react";
 import { TranslationDict } from "../types";
 import { UserAccount } from "./AuthModal";
 
@@ -40,6 +40,8 @@ export default function Header({
 
   const menuItems = [
     { id: "home", label: translations.navHome, icon: Home },
+    { id: "settings", label: translations.navSettings, icon: Settings2 },
+    { id: "crosshair", label: translations.navCrosshair || "Crosshair", icon: Crosshair },
     { id: "system", label: translations.navSystem, icon: Monitor },
     { id: "about", label: translations.navAbout, icon: User },
     { id: "contact", label: translations.navContact, icon: Mail }

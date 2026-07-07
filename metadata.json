@@ -1,6 +1,6 @@
 {
   "name": "Weew Portal",
-  "description": "Weew - Personalizable Streamer & Content Creator Portal featuring social links, live stream, gaming specs, and custom settings.",
+  "description": "İnan (Weew) - Kişiselleştirilebilir Yayıncı ve İçerik Üreticisi Portalı: Sosyal linkler, canlı yayın durumu, sistem donanımı ve gelişmiş oyun içi ayarlar.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
