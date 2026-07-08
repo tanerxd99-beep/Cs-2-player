@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { Bell, BellOff, X, ExternalLink } from "lucide-react";
 import Header from "./components/Header";
 import HeroSection from "./components/HeroSection";
 import SocialGrid from "./components/SocialGrid";
@@ -80,7 +81,15 @@ const DEFAULT_CS2_SETTINGS: CS2SettingsData = {
 export default function App() {
   const [lang, setLang] = useState<"TR" | "EN">("TR");
   const [activeSection, setActiveSection] = useState("home");
-  const [isStreamLive, setIsStreamLive] = useState(false);
+  
+  const [isStreamLive, setIsStreamLive] = useState<boolean>(() => {
+    return localStorage.getItem("weew_is_stream_live") === "true";
+  });
+
+  const handleSetIsStreamLive = (val: boolean) => {
+    setIsStreamLive(val);
+    localStorage.setItem("weew_is_stream_live", val ? "true" : "false");
+  };
 
   // Simulated Kick Live Stream details managed dynamically via Admin Panel
   const [streamCategory, setStreamCategory] = useState<string>(() => {
@@ -107,6 +116,176 @@ export default function App() {
     setStreamViewers(val);
     localStorage.setItem("weew_stream_viewers", val);
   };
+
+  // Kick API Auto-Sync Simulation States
+  const [kickApiEnabled, setKickApiEnabled] = useState<boolean>(() => {
+    return localStorage.getItem("weew_kick_api_enabled") === "true";
+  });
+
+  const [kickApiLogs, setKickApiLogs] = useState<string[]>(() => {
+    return ["[SYSTEM] Kick API simülatörü hazır. Kanal: 'inan'"];
+  });
+
+  const handleSetKickApiEnabled = (enabled: boolean) => {
+    setKickApiEnabled(enabled);
+    localStorage.setItem("weew_kick_api_enabled", enabled ? "true" : "false");
+    
+    const timeStr = new Date().toLocaleTimeString("tr-TR");
+    if (enabled) {
+      handleSetIsStreamLive(true);
+      setKickApiLogs(prev => [
+        `[${timeStr}] [SYSTEM] Otomatik Kick API senkronizasyonu etkinleştirildi.`,
+        `[${timeStr}] [KICK-API] Polling döngüsü başlatıldı: https://api.kick.com/v2/channels/inan/lives`,
+        ...prev.slice(0, 12)
+      ]);
+    } else {
+      setKickApiLogs(prev => [
+        `[${timeStr}] [SYSTEM] Otomatik Kick API senkronizasyonu kapatıldı.`,
+        `[${timeStr}] [KICK-API] Polling durduruldu. Manuel yönetime geçildi.`,
+        ...prev.slice(0, 12)
+      ]);
+    }
+  };
+
+  useEffect(() => {
+    if (!kickApiEnabled) return;
+
+    // Ensure state is live initially
+    handleSetIsStreamLive(true);
+
+    const interval = setInterval(() => {
+      const now = new Date();
+      const currentLogTime = now.toLocaleTimeString("tr-TR");
+      
+      // Randomly fluctuate viewer count slightly to make it look live
+      let updatedViewers = "1400";
+      setStreamViewers(prev => {
+        const currentVal = parseInt(prev, 10) || 1400;
+        const change = Math.floor(Math.random() * 31) - 15; // -15 to +15
+        const newVal = Math.max(120, currentVal + change);
+        updatedViewers = newVal.toString();
+        localStorage.setItem("weew_stream_viewers", updatedViewers);
+        return updatedViewers;
+      });
+
+      // Append realistic polling log
+      setKickApiLogs(prev => {
+        const nextLog = `[${currentLogTime}] [KICK-API] GET /v2/channels/inan - 200 OK | Kategori: ${streamCategory} | İzleyici: ${updatedViewers}`;
+        return [nextLog, ...prev.slice(0, 15)];
+      });
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [kickApiEnabled, streamCategory]);
+
+  const [profile, setProfile] = useState<UserProfile>(() => {
+    const saved = localStorage.getItem("weew_user_profile");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // ignore
+      }
+    }
+    return DEFAULT_PROFILE;
+  });
+
+  // Browser notifications preference
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(() => {
+    return localStorage.getItem("weew_notifications_enabled") === "true";
+  });
+
+  const [notificationPermission, setNotificationPermission] = useState<string>(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      return Notification.permission;
+    }
+    return "default";
+  });
+
+  const handleToggleNotifications = async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      alert(lang === "TR" ? "Tarayıcınız masaüstü bildirimlerini desteklemiyor." : "Your browser does not support desktop notifications.");
+      return;
+    }
+
+    if (Notification.permission === "denied") {
+      alert(lang === "TR" 
+        ? "Masaüstü bildirim izinleri tarayıcınızda engellenmiş. Lütfen adres çubuğundaki kilit simgesinden izin verin." 
+        : "Desktop notification permissions are blocked in your browser. Please grant permissions via the lock icon in the address bar."
+      );
+      return;
+    }
+
+    if (Notification.permission === "default") {
+      try {
+        const permission = await Notification.requestPermission();
+        setNotificationPermission(permission);
+        if (permission === "granted") {
+          setNotificationsEnabled(true);
+          localStorage.setItem("weew_notifications_enabled", "true");
+          new Notification(lang === "TR" ? "Bildirimler Etkinleştirildi! 🔔" : "Notifications Enabled! 🔔", {
+            body: lang === "TR" ? "Kanal canlı yayına girdiğinde anlık bildirim alacaksınız." : "You will receive instant notifications when the channel goes live.",
+            icon: profile.profilePhoto || "https://images.unsplash.com/photo-1566492031773-4f4e44671857?q=80&w=200&auto=format&fit=crop"
+          });
+        } else {
+          setNotificationsEnabled(false);
+          localStorage.setItem("weew_notifications_enabled", "false");
+        }
+      } catch (err) {
+        console.warn("Notification permission request failed (likely due to iframe constraints):", err);
+        // Fallback: allow toggling the setting inside our app sandbox regardless of requestPermission block
+        const nextState = !notificationsEnabled;
+        setNotificationsEnabled(nextState);
+        localStorage.setItem("weew_notifications_enabled", nextState ? "true" : "false");
+      }
+    } else {
+      // already granted
+      const nextState = !notificationsEnabled;
+      setNotificationsEnabled(nextState);
+      localStorage.setItem("weew_notifications_enabled", nextState ? "true" : "false");
+    }
+  };
+
+  // In-app live notify toast state
+  const [liveToast, setLiveToast] = useState<{
+    show: boolean;
+    title: string;
+    body: string;
+  } | null>(null);
+
+  // Monitor stream state transitions from offline -> online (false -> true)
+  const prevLiveRef = useRef(isStreamLive);
+
+  useEffect(() => {
+    if (isStreamLive && !prevLiveRef.current) {
+      const title = lang === "TR" ? "🔴 İnan CANLI YAYINDA!" : "🔴 Inan IS NOW LIVE!";
+      const body = lang === "TR" 
+        ? `"${streamTitle || 'Kesintisiz Eğlence Başladı!'}" - ${streamCategory || 'Sohbet'} yayını başladı, hemen katılın!`
+        : `"${streamTitle || 'Non-stop Entertainment Started!'}" - Streaming ${streamCategory || 'Just Chatting'} now!`;
+
+      // 1. Send real browser notification if supported, enabled and granted
+      if (notificationsEnabled && typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+        try {
+          new Notification(title, {
+            body: body,
+            icon: profile.profilePhoto || "https://images.unsplash.com/photo-1566492031773-4f4e44671857?q=80&w=200&auto=format&fit=crop",
+            tag: "kick-live-stream",
+            requireInteraction: true
+          });
+        } catch (err) {
+          console.warn("Failed to dispatch HTML5 browser notification:", err);
+        }
+      }
+
+      // 2. Always show the gorgeous custom in-app live alert at the top right of the viewport
+      setLiveToast({
+        show: true,
+        title,
+        body
+      });
+    }
+    prevLiveRef.current = isStreamLive;
+  }, [isStreamLive, notificationsEnabled, streamTitle, streamCategory, profile.profilePhoto, lang]);
   
   // Auth & Admin Modal States
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -184,18 +363,6 @@ export default function App() {
       }
     }
     return null;
-  });
-
-  const [profile, setProfile] = useState<UserProfile>(() => {
-    const saved = localStorage.getItem("weew_user_profile");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        // ignore
-      }
-    }
-    return DEFAULT_PROFILE;
   });
 
   const [cs2Settings, setCs2Settings] = useState<CS2SettingsData>(() => {
@@ -388,13 +555,15 @@ export default function App() {
         setActiveSection={setActiveSection} 
         translations={translations}
         isStreamLive={isStreamLive}
-        setIsStreamLive={setIsStreamLive}
+        setIsStreamLive={handleSetIsStreamLive}
         siteName={profile.siteName}
         profilePhoto={profile.profilePhoto}
         currentUser={currentUser}
         onLogout={handleLogout}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
         onOpenAdminPanel={() => setIsAdminPanelOpen(true)}
+        notificationsEnabled={notificationsEnabled}
+        onToggleNotifications={handleToggleNotifications}
       />
 
       {/* Main View Layout with Animated Page Transitions */}
@@ -414,6 +583,7 @@ export default function App() {
                 translations={translations} 
                 siteName={profile.siteName} 
                 profilePhoto={profile.profilePhoto} 
+                isStreamLive={isStreamLive}
               />
 
               {/* Announcement Banner/Section */}
@@ -433,7 +603,7 @@ export default function App() {
               <KickLiveSection 
                 translations={translations} 
                 isStreamLive={isStreamLive} 
-                setIsStreamLive={setIsStreamLive} 
+                setIsStreamLive={handleSetIsStreamLive} 
                 siteName={profile.siteName}
                 profilePhoto={profile.profilePhoto}
                 kickUsername={profile.kickUsername}
@@ -581,7 +751,7 @@ export default function App() {
             profile={profile}
             onSaveProfile={handleSaveProfile}
             isStreamLive={isStreamLive}
-            setIsStreamLive={setIsStreamLive}
+            setIsStreamLive={handleSetIsStreamLive}
             currentUser={currentUser}
             cs2Settings={cs2Settings}
             onSaveCs2Settings={handleSaveCs2Settings}
@@ -603,7 +773,85 @@ export default function App() {
             onToggleRegistration={handleToggleRegistration}
             visitorCount={visitorCount}
             onSaveVisitorCount={handleSaveVisitorCount}
+            kickApiEnabled={kickApiEnabled}
+            onToggleKickApi={handleSetKickApiEnabled}
+            kickApiLogs={kickApiLogs}
+            notificationsEnabled={notificationsEnabled}
+            onToggleNotifications={handleToggleNotifications}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Live Stream Fallback/Interactive Toast Alert */}
+      <AnimatePresence>
+        {liveToast?.show && (
+          <motion.div
+            initial={{ opacity: 0, x: 50, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+            exit={{ opacity: 0, x: 50, scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className="fixed bottom-6 right-6 z-[9999] w-[320px] sm:w-[360px] rounded-3xl border border-[#00e676]/30 bg-[#090b11] p-5 shadow-[0_10px_35px_rgba(0,230,118,0.15)] overflow-hidden text-left"
+            id="live-stream-toast-notification"
+          >
+            {/* Ambient green pulsing background blur */}
+            <div className="absolute top-0 right-0 h-24 w-24 bg-[#00e676]/5 rounded-full blur-2xl pointer-events-none" />
+            
+            <div className="relative z-10 flex gap-4">
+              {/* Avatar or Glowing Live Logo */}
+              <div className="relative shrink-0">
+                <img 
+                  src={profile.profilePhoto || "https://images.unsplash.com/photo-1566492031773-4f4e44671857?q=80&w=200&auto=format&fit=crop"} 
+                  alt={profile.siteName} 
+                  className="h-11 w-11 rounded-2xl border border-white/10 object-cover"
+                />
+                <span className="absolute -bottom-1 -right-1 flex h-4 w-4">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00e676] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-4 w-4 bg-[#00e676] text-[8px] font-black text-black items-center justify-center">🔴</span>
+                </span>
+              </div>
+
+              {/* Toast Details */}
+              <div className="flex-1 space-y-1">
+                <div className="flex items-start justify-between gap-2">
+                  <h4 className="text-xs font-mono font-black text-[#00e676] uppercase tracking-wider">
+                    {lang === "TR" ? "YAYIN BAŞLADI" : "STREAM STARTED"}
+                  </h4>
+                  <button 
+                    onClick={() => setLiveToast(null)}
+                    className="text-gray-500 hover:text-white transition rounded-lg p-0.5 cursor-pointer"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <h3 className="font-display text-sm font-extrabold text-white leading-snug">
+                  {liveToast.title}
+                </h3>
+                <p className="text-xs text-gray-400 font-medium leading-relaxed">
+                  {liveToast.body}
+                </p>
+
+                {/* Interactive Action CTA buttons */}
+                <div className="pt-3 flex items-center gap-2">
+                  <a 
+                    href={profile.kickUrl} 
+                    target="_blank" 
+                    rel="noreferrer"
+                    onClick={() => setLiveToast(null)}
+                    className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-[#00e676] hover:bg-[#00c853] text-black text-[11px] font-black uppercase tracking-wider py-2 transition text-center"
+                  >
+                    <span>{lang === "TR" ? "YAYINA KATIL" : "WATCH NOW"}</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                  <button 
+                    onClick={() => setLiveToast(null)}
+                    className="px-3 py-2 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-[11px] font-bold transition cursor-pointer"
+                  >
+                    {lang === "TR" ? "Kapat" : "Close"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

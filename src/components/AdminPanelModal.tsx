@@ -93,6 +93,11 @@ interface AdminPanelModalProps {
   onToggleRegistration?: (disabled: boolean) => void;
   visitorCount?: number;
   onSaveVisitorCount?: (count: number) => void;
+  kickApiEnabled?: boolean;
+  onToggleKickApi?: (enabled: boolean) => void;
+  kickApiLogs?: string[];
+  notificationsEnabled?: boolean;
+  onToggleNotifications?: () => void;
 }
 
 interface MessageInboxItem {
@@ -180,7 +185,12 @@ export default function AdminPanelModal({
   isRegistrationDisabled = false,
   onToggleRegistration,
   visitorCount = 0,
-  onSaveVisitorCount
+  onSaveVisitorCount,
+  kickApiEnabled = false,
+  onToggleKickApi,
+  kickApiLogs = [],
+  notificationsEnabled = false,
+  onToggleNotifications
 }: AdminPanelModalProps) {
   const [activeSubTab, setActiveSubTab] = useState<"dashboard" | "profile" | "settings" | "inbox" | "users" | "stream" | "crosshairs" | "playlists" | "specs" | "announcements">("dashboard");
   const [formData, setFormData] = useState<UserProfile>({ ...profile });
@@ -1161,44 +1171,227 @@ export default function AdminPanelModal({
                 </div>
 
                 {/* Quick Stream Simulator Controls Panel */}
-                <div className="p-6 rounded-3xl bg-gradient-to-br from-purple-950/20 to-indigo-950/20 border border-purple-500/10 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 h-40 w-40 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="p-6 rounded-3xl bg-gradient-to-br from-[#11121d] to-[#0e0f17] border border-white/5 relative overflow-hidden space-y-6">
+                  <div className="absolute top-0 right-0 h-40 w-40 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
+                  
                   <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-[#00e676] animate-ping" />
-                        <span className="text-[10px] font-mono font-bold text-[#00e676] uppercase tracking-widest">Hızlı Yayın Simülatörü</span>
+                        <span className={`h-2 w-2 rounded-full ${isStreamLive ? "bg-[#00e676] animate-pulse" : "bg-red-500"}`} />
+                        <span className="text-[10px] font-mono font-bold text-purple-400 uppercase tracking-widest">
+                          Yayın Durumu & Kick API Entegrasyonu
+                        </span>
                       </div>
                       <h3 className="font-display text-lg font-extrabold text-white uppercase tracking-wider">
-                        KICK CANLI YAYIN DURUMUNUZU KONTROL EDİN
+                        Otomatik Kick API Simülasyonu
                       </h3>
-                      <p className="text-xs text-gray-400 max-w-xl font-medium">
-                        Ana sayfadaki canlı yayın simülasyonunu anlık başlatıp kapatın. Yayın aktifken kategori, izleyici sayısı ve başlık verileri canlı olarak güncellenir.
+                      <p className="text-xs text-gray-400 max-w-xl font-medium leading-relaxed">
+                        Kick API kanallarını otomatik dinleyen arka plan servisini aktifleştirin. API etkinleştirildiğinde harici yayın durumunuza göre canlı göstergesi otomatik tetiklenir ve izleyici sayısı dalgalanır.
                       </p>
                     </div>
 
                     <div className="flex flex-wrap gap-3">
+                      {/* Manual Override Button */}
+                      {!kickApiEnabled && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextLive = !isStreamLive;
+                            setIsStreamLive(nextLive);
+                            showToast(
+                              nextLive 
+                                ? "Yayın başarıyla başlatıldı! Şu an CANLI (LIVE) yayındasınız." 
+                                : "Yayın durduruldu. Çevrimdışı (OFFLINE) moda geçildi.",
+                              nextLive ? "success" : "info"
+                            );
+                          }}
+                          className={`rounded-xl px-5 py-2.5 text-[11px] font-black uppercase tracking-wider transition duration-300 cursor-pointer ${
+                            isStreamLive 
+                              ? "bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(220,38,38,0.3)]" 
+                              : "bg-[#00e676]/20 border border-[#00e676]/40 hover:bg-[#00e676]/30 text-[#00e676]"
+                          }`}
+                        >
+                          {isStreamLive ? "MANUEL YAYINI KAPAT" : "MANUEL YAYINI BAŞLAT"}
+                        </button>
+                      )}
+
+                      {/* API Sync Toggle */}
                       <button
                         type="button"
                         onClick={() => {
-                          const nextLive = !isStreamLive;
-                          setIsStreamLive(nextLive);
-                          showToast(
-                            nextLive 
-                              ? "Yayın simülatörü başarıyla başlatıldı! Şu an CANLI (LIVE) yayındasınız." 
-                              : "Yayın simülatörü durduruldu. Çevrimdışı (OFFLINE) moda geçildi.",
-                            nextLive ? "success" : "info"
-                          );
+                          if (onToggleKickApi) {
+                            const nextState = !kickApiEnabled;
+                            onToggleKickApi(nextState);
+                            showToast(
+                              nextState 
+                                ? "Otomatik Kick API senkronizasyonu etkinleştirildi! Arka plan istekleri başladı." 
+                                : "API Entegrasyon simülasyonu kapatıldı. Manuel denetim aktif.",
+                              nextState ? "success" : "info"
+                            );
+                          }
                         }}
-                        className={`rounded-2xl px-6 py-3 text-xs font-black uppercase tracking-widest transition duration-300 cursor-pointer ${
-                          isStreamLive 
-                            ? "bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]" 
-                            : "bg-[#00e676] hover:bg-[#00c853] text-black shadow-[0_0_15px_rgba(0,230,118,0.4)]"
+                        className={`rounded-xl px-5 py-2.5 text-[11px] font-black uppercase tracking-wider transition duration-300 cursor-pointer ${
+                          kickApiEnabled 
+                            ? "bg-[#00e676] hover:bg-[#00c853] text-black shadow-[0_0_15px_rgba(0,230,118,0.3)]" 
+                            : "bg-white/5 hover:bg-white/10 text-gray-300 border border-white/5"
                         }`}
                       >
-                        {isStreamLive ? "YAYINI KAPAT (OFFLINE)" : "YAYINI BAŞLAT (LIVE)"}
+                        {kickApiEnabled ? "⚡ API SENKRONİZASYONU: AKTİF" : "🔌 API SENKRONİZASYONU BAŞLAT"}
                       </button>
                     </div>
+                  </div>
+
+                  {/* Simulated API Developer Tools and Interactive Operations */}
+                  {kickApiEnabled && (
+                    <div className="relative z-10 border-t border-white/5 pt-4 flex flex-wrap items-center justify-between gap-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-mono text-purple-400 font-bold uppercase tracking-wider">Simülasyon Araçları:</span>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Simulate custom spike
+                              if (onSaveStreamViewers) {
+                                onSaveStreamViewers("1850");
+                                showToast("Simüle Edilen API: Ani izleyici patlaması (+450 izleyici) tetiklendi!", "success");
+                              }
+                            }}
+                            className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition cursor-pointer"
+                          >
+                            📈 İzleyici Patlaması (+450)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Simulate stream disconnection
+                              setIsStreamLive(false);
+                              if (onToggleKickApi) {
+                                onToggleKickApi(false);
+                              }
+                              showToast("API Entegrasyonu: Yayın bağlantı kesintisi simüle edildi. Sistem otomatik OFFLINE moduna düştü!", "error");
+                            }}
+                            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition cursor-pointer"
+                          >
+                            💥 Bağlantı Kesintisi (Crash)
+                          </button>
+                        </div>
+                      </div>
+                      <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider animate-pulse">
+                        ● API VERİLERİ HER 4 SANİYEDE BİR OTO-SORGULANIYOR
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Terminal Log Console Component */}
+                  <div className="rounded-xl border border-white/5 bg-[#090a10] overflow-hidden">
+                    {/* Console Header */}
+                    <div className="flex items-center justify-between px-4 py-2 border-b border-white/5 bg-[#0d0e15] text-[10px] font-mono font-bold text-gray-500 uppercase tracking-wider">
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-red-500/60" />
+                          <span className="h-2 w-2 rounded-full bg-yellow-500/60" />
+                          <span className="h-2 w-2 rounded-full bg-green-500/60" />
+                        </div>
+                        <span>kick-api-polling-service.log</span>
+                      </div>
+                      <span className="text-purple-400 animate-pulse">LIVE MONITOR</span>
+                    </div>
+                    {/* Console Body */}
+                    <div className="p-3 sm:p-4 h-[120px] overflow-y-auto font-mono text-[10px] sm:text-xs text-green-400/95 space-y-1 scrollbar-thin scrollbar-thumb-white/5">
+                      {kickApiLogs && kickApiLogs.length > 0 ? (
+                        kickApiLogs.map((log, idx) => (
+                          <div 
+                            key={idx} 
+                            className={`leading-normal truncate ${
+                              log.includes("kesintisi") || log.includes("durum") || log.includes("kapatıldı") || log.includes("durduruldu") || log.includes("SYSTEM")
+                                ? "text-purple-400" 
+                                : log.includes("200 OK") 
+                                ? "text-green-400" 
+                                : "text-gray-400"
+                            }`}
+                          >
+                            {log}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-gray-600 italic">Simülatör logları bekleniyor...</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tarayıcı Bildirim Ayarları Kontrolü */}
+                <div id="browser-notifications-section" className="p-6 rounded-3xl bg-[#11121d] border border-white/5 space-y-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                      <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest block font-bold mb-1">
+                        🔔 MASAÜSTÜ BİLDİRİM SİSTEMİ
+                      </span>
+                      <h3 className="font-display text-sm font-extrabold text-white uppercase tracking-wider">
+                        Canlı Yayın Bildirim Ayarları
+                      </h3>
+                      <p className="text-xs text-gray-400 font-medium leading-relaxed max-w-xl">
+                        Yayıncı canlı yayına başladığında tarayıcınızda anlık 'Canlı Yayına Girdi' bildirimi gönderilmesini kontrol edin. Bildirim gönderme durumu aktifleştirilmeden önce tarayıcı izni istenir.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onToggleNotifications) {
+                          onToggleNotifications();
+                        }
+                      }}
+                      className={`rounded-xl px-5 py-2.5 text-[11px] font-black uppercase tracking-wider transition duration-300 cursor-pointer ${
+                        notificationsEnabled 
+                          ? "bg-[#00e676] hover:bg-[#00c853] text-black shadow-[0_0_15px_rgba(0,230,118,0.3)]" 
+                          : "bg-white/5 hover:bg-white/10 text-gray-300 border border-white/5"
+                      }`}
+                    >
+                      {notificationsEnabled ? "🔔 BİLDİRİMLER: AÇIK" : "🔕 BİLDİRİMLER: KAPALI"}
+                    </button>
+                  </div>
+
+                  {/* Permission and test tool details */}
+                  <div className="pt-3 border-t border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-[10px] font-mono text-gray-400">
+                      <span>Tarayıcı İzin Durumu:</span>
+                      <span className={`px-2 py-0.5 rounded font-black uppercase text-[9px] ${
+                        typeof window !== "undefined" && "Notification" in window
+                          ? Notification.permission === "granted"
+                            ? "bg-green-500/10 text-green-400"
+                            : Notification.permission === "denied"
+                            ? "bg-red-500/10 text-red-400"
+                            : "bg-yellow-500/10 text-yellow-400"
+                          : "bg-red-500/10 text-red-400"
+                      }`}>
+                        {typeof window !== "undefined" && "Notification" in window
+                          ? Notification.permission
+                          : "Not Supported"}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+                          try {
+                            new Notification("Test Bildirimi 🔔", {
+                              body: "Yayın bildirim sistemi aktif! Canlı yayınlar başladığında bu şekilde bilgilendirileceksiniz.",
+                              icon: profile.profilePhoto || "https://images.unsplash.com/photo-1566492031773-4f4e44671857?q=80&w=200&auto=format&fit=crop"
+                            });
+                            showToast("Test bildirimi başarıyla gönderildi!", "success");
+                          } catch (err) {
+                            showToast("Masaüstü bildirimi gönderilemedi. Iframe içerisinde olabilirsiniz.", "info");
+                          }
+                        } else {
+                          showToast("Lütfen önce yukarıdan bildirimleri açarak izin verin.", "error");
+                        }
+                      }}
+                      className="text-[10px] font-bold text-purple-400 hover:text-purple-300 uppercase tracking-widest transition cursor-pointer"
+                    >
+                      ⚡ TEST BİLDİRİMİ GÖNDER
+                    </button>
                   </div>
                 </div>
 

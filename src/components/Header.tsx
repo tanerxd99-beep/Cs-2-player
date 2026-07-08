@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Menu, X, Globe, ChevronDown, Tv, Home, Monitor, User, Mail, LogIn, LogOut, Shield, Settings2, Crosshair, Youtube } from "lucide-react";
+import { Menu, X, Globe, ChevronDown, Tv, Home, Monitor, User, Mail, LogIn, LogOut, Shield, Settings2, Crosshair, Youtube, Bell, BellOff } from "lucide-react";
 import { TranslationDict } from "../types";
 import { UserAccount } from "./AuthModal";
 
@@ -18,6 +18,8 @@ interface HeaderProps {
   onLogout: () => void;
   onOpenAuthModal: () => void;
   onOpenAdminPanel: () => void;
+  notificationsEnabled?: boolean;
+  onToggleNotifications?: () => void;
 }
 
 export default function Header({
@@ -33,7 +35,9 @@ export default function Header({
   currentUser,
   onLogout,
   onOpenAuthModal,
-  onOpenAdminPanel
+  onOpenAdminPanel,
+  notificationsEnabled = false,
+  onToggleNotifications
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
@@ -128,6 +132,29 @@ export default function Header({
 
         {/* Action Controls (Lang, Kick, Auth, Mobile Toggle) */}
         <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3">
+
+          {/* Stream Live Notifications Bell */}
+          <button
+            onClick={onToggleNotifications}
+            id="stream-notification-bell-btn"
+            className={`flex items-center justify-center rounded-lg border p-1.5 sm:p-2 text-xs transition duration-200 cursor-pointer ${
+              notificationsEnabled 
+                ? "bg-[#00e676]/10 border-[#00e676]/30 text-[#00e676] shadow-[0_0_12px_rgba(0,230,118,0.2)] hover:bg-[#00e676]/20" 
+                : "border-white/10 bg-[#161925] text-gray-400 hover:border-purple-500/30 hover:text-white"
+            }`}
+            title={lang === "TR" ? "Canlı Yayın Bildirimlerini Aç/Kapat" : "Toggle Live Stream Notifications"}
+          >
+            <motion.div
+              animate={notificationsEnabled ? { rotate: [0, -15, 15, -15, 15, 0] } : {}}
+              transition={{ repeat: notificationsEnabled ? Infinity : 0, repeatDelay: 6, duration: 0.6 }}
+            >
+              {notificationsEnabled ? (
+                <Bell className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              ) : (
+                <BellOff className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              )}
+            </motion.div>
+          </button>
           
           {/* Language Selector Dropdown */}
           <div className="relative shrink-0">

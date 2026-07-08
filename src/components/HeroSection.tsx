@@ -7,13 +7,14 @@ interface HeroSectionProps {
   translations: TranslationDict;
   siteName: string;
   profilePhoto: string;
+  isStreamLive?: boolean;
 }
 
-export default function HeroSection({ translations, siteName, profilePhoto }: HeroSectionProps) {
+export default function HeroSection({ translations, siteName, profilePhoto, isStreamLive = false }: HeroSectionProps) {
   return (
     <section 
       id="home" 
-      className="relative flex flex-col items-center justify-center pt-16 pb-12 overflow-hidden"
+      className="relative flex flex-col items-center justify-center pt-12 pb-12 overflow-hidden"
     >
       {/* Background glow layers */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full purple-glow pointer-events-none -z-10" />
@@ -21,6 +22,23 @@ export default function HeroSection({ translations, siteName, profilePhoto }: He
 
       {/* Grid overlay */}
       <div className="absolute inset-0 grid-bg opacity-30 pointer-events-none -z-10" />
+
+      {/* Pulsing Liveness Indicator Badge */}
+      {isStreamLive && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+          className="mb-5 flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#00e676]/10 border border-[#00e676]/30 text-[#00e676] text-[10px] sm:text-xs font-extrabold uppercase tracking-widest shadow-[0_0_15px_rgba(0,230,118,0.25)] animate-pulse"
+          id="hero-live-badge"
+        >
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00e676] opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#00e676]"></span>
+          </span>
+          <span>{translations.kickLive || "Şu an Yayında"}</span>
+        </motion.div>
+      )}
 
       {/* Avatar with Orbital Ring */}
       <div className="relative flex items-center justify-center mb-6" id="hero-avatar-orbit-wrapper">
