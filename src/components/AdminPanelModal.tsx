@@ -5,7 +5,8 @@ import {
   Settings2, Trash2, Check, RefreshCw, MessageSquare, AlertCircle, Award,
   Upload, Smartphone, Sliders, Play, Info, Plus, Target, ExternalLink,
   LayoutDashboard, Radio, Eye, Activity, Youtube, Megaphone, Cpu, Layers, Bell,
-  Sparkles, Download, Gift, Trophy, Search, Filter, CheckCheck, Copy, MailOpen
+  Sparkles, Download, Gift, Trophy, Search, Filter, CheckCheck, Copy, MailOpen,
+  Menu, LogOut
 } from "lucide-react";
 import { UserProfile } from "./EditProfileModal";
 import { UserAccount } from "./AuthModal";
@@ -198,6 +199,7 @@ export default function AdminPanelModal({
   const [formData, setFormData] = useState<UserProfile>({ ...profile });
   const [settingsForm, setSettingsForm] = useState<CS2SettingsData>({ ...cs2Settings });
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Scroll Position Retention & Fluid Transition Refs
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
@@ -1190,105 +1192,153 @@ export default function AdminPanelModal({
     }
   };
 
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/90 backdrop-blur-md" onClick={onClose} />
+    <div className="fixed inset-0 z-50 flex overflow-hidden font-sans bg-[#0c0d16] text-white">
+      {/* Mobile Sidebar overlay backdrop */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-black/60 md:hidden backdrop-blur-xs" 
+          onClick={() => setSidebarOpen(false)} 
+        />
+      )}
 
-      {/* Main Admin Dashboard Modal */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98, y: 15 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.98, y: 15 }}
-        className="relative w-full max-w-4xl rounded-3xl border border-purple-500/10 bg-[#0c0d16] shadow-2xl z-10 flex flex-col overflow-hidden max-h-[85vh] text-left"
-      >
-        
-        {/* Top Sticky Header and Horizontal/Responsive Navigation Tabs Bar */}
-        <div className="border-b border-white/5 bg-[#0f111c]/60 backdrop-blur-md px-4 sm:px-6 py-3 shrink-0">
-          <div className="flex items-center justify-between gap-4 mb-3">
-            <div className="flex items-center space-x-2.5">
-              <div className="bg-purple-600/10 p-1.5 rounded-xl border border-purple-500/20">
-                <Shield className="h-4.5 w-4.5 text-purple-400" />
-              </div>
-              <div>
-                <h3 className="font-display text-sm font-extrabold text-white uppercase tracking-wider flex flex-wrap items-center gap-1.5 sm:gap-2">
-                  <span>YÖNETİM PANELİ</span>
-                  <span className="text-[9px] font-mono font-black text-purple-400 bg-purple-500/10 border border-purple-500/20 px-1.5 py-0.5 rounded uppercase tracking-widest">
-                    Super Admin
-                  </span>
-                </h3>
-                <p className="text-[10px] text-gray-500 font-semibold mt-0.5 hidden sm:block">
-                  Hoş geldin, {currentUser?.name || "İrem Saltanat"}
-                </p>
-              </div>
+      {/* Sidebar - mimicking screenshot exactly */}
+      <div className={`
+        fixed inset-y-0 left-0 z-40 flex flex-col w-[260px] bg-[#2a3038] text-[#a3a8b1] transition-transform duration-300 transform shrink-0
+        md:translate-x-0 md:relative md:flex h-full
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+      `}>
+        {/* Brand Area */}
+        <div className="flex items-center justify-between h-16 px-5 bg-[#242930] shrink-0 border-b border-white/5">
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#007bff] text-white font-bold text-sm shadow-md">
+              <Shield className="h-4 w-4" />
             </div>
-            
-            <button
-              onClick={onClose}
-              className="rounded-xl border border-white/5 p-1.5 text-gray-400 hover:text-white hover:bg-white/5 transition cursor-pointer"
-              title="Kapat"
+            <span className="font-display font-black text-white text-xs tracking-widest uppercase">
+              Admin Panel
+            </span>
+          </div>
+          <button 
+            onClick={() => setSidebarOpen(false)} 
+            className="md:hidden text-gray-400 hover:text-white"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Sidebar Navigation Items - mapped exactly like the screenshot */}
+        <div className="flex-1 overflow-y-auto py-4 px-2 space-y-1 custom-scrollbar">
+          {[
+            { id: "dashboard", label: "Dashboard", subTab: "dashboard" as const, icon: LayoutDashboard },
+            { id: "announcements", label: "Blog Yorumları", subTab: "announcements" as const, icon: MessageSquare, badge: announcements.length || 2 },
+            { id: "profile", label: "Slider Yönetimi", subTab: "profile" as const, icon: Image },
+            { id: "crosshairs", label: "Menü Yönetimi", subTab: "crosshairs" as const, icon: Target, hasArrow: true },
+            { id: "specs", label: "Sayfalar", subTab: "specs" as const, icon: Cpu },
+            { id: "stream", label: "Hakkımızda", subTab: "stream" as const, icon: Radio, hasArrow: true },
+            { id: "playlists", label: "Hikaye", subTab: "playlists" as const, icon: Youtube },
+            { id: "giveaways", label: "Blog Yönetimi", subTab: "giveaways" as const, icon: Gift, hasArrow: true },
+            { id: "users-gallery", label: "Galeri", subTab: "users" as const, icon: Layers },
+            { id: "giveaway-entrants", label: "Müşteri Yorumları", subTab: "users" as const, icon: MessageSquare },
+            { id: "giveaways-rez", label: "Rezervasyonlar", subTab: "giveaways" as const, icon: Gift },
+            { id: "inbox", label: "İletişim Formları", subTab: "inbox" as const, icon: Mail, badge: messages.length },
+            { id: "users", label: "Kullanıcılar", subTab: "users" as const, icon: Users },
+            { id: "settings", label: "Site Ayarları", subTab: "settings" as const, icon: Settings2, hasArrow: true }
+          ].map((item) => {
+            const isTabActive = (() => {
+              if (item.subTab === "profile" && activeSubTab === "dashboard") return false;
+              if (item.id === "users-gallery" || item.id === "giveaway-entrants") {
+                return activeSubTab === "users" && item.id === "users-gallery"; // prevent dual active highlight
+              }
+              return activeSubTab === item.subTab;
+            })();
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  handleTabChange(item.subTab);
+                  setSidebarOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition duration-150 cursor-pointer text-left ${
+                  isTabActive
+                    ? "bg-[#007bff] text-white shadow-md font-bold"
+                    : "text-[#a3a8b1] hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <div className="flex items-center space-x-3 truncate">
+                  <item.icon className={`h-4 w-4 shrink-0 ${isTabActive ? "text-white" : "text-[#8b95a5]"}`} />
+                  <span className="truncate">{item.label}</span>
+                </div>
+                
+                <div className="flex items-center space-x-1.5 shrink-0">
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <span className="bg-red-500 text-white rounded-full px-1.5 py-0.5 text-[8px] font-black leading-none">
+                      {item.badge}
+                    </span>
+                  )}
+                  {item.hasArrow && (
+                    <span className="text-[8px] text-gray-500">▼</span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Main Container */}
+      <div className="flex-1 flex flex-col overflow-hidden h-full">
+        {/* Top Header Bar */}
+        <div className="h-16 border-b px-4 md:px-6 flex items-center justify-between shrink-0 bg-[#0f111c] border-white/5">
+          <div className="flex items-center space-x-3">
+            <button 
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="md:hidden text-gray-400 hover:text-white p-1.5 rounded-lg focus:outline-none"
             >
-              <X className="h-4.5 w-4.5" />
+              <Menu className="h-5.5 w-5.5" />
             </button>
+            
+            {/* Breadcrumbs next to burger (hidden on small mobile) */}
+            <div className="hidden sm:flex items-center space-x-2 text-xs font-semibold uppercase tracking-wider">
+              <span className="text-gray-500">Panel</span>
+              <span className="text-gray-600">/</span>
+              <span className="capitalize text-purple-400 font-extrabold">{activeSubTab}</span>
+            </div>
           </div>
 
-          {/* Main Tabs Horizontal Row - Scrollable on mobile, beautiful badges */}
-          <div className="flex items-center space-x-1.5 overflow-x-auto scrollbar-none pb-1 -mx-2 px-2">
-            {[
-              { id: "profile", label: "Profil", icon: User },
-              { id: "stream", label: "Yayın", icon: Radio, isLive: isStreamLive },
-              { id: "crosshairs", label: "Crosshair", icon: Target },
-              { id: "playlists", label: "YouTube", icon: Youtube },
-              { id: "settings", label: "Sistem Ayarları", icon: Settings2 },
-              { id: "specs", label: "Donanım / Ekipman", icon: Sliders },
-              { id: "announcements", label: "Duyuru Paneli", icon: Megaphone },
-              { id: "giveaways", label: "Çekilişler", icon: Gift },
-            ].map((tab) => {
-              // Determine active state
-              const isTabActive = (() => {
-                if (tab.id === "profile") {
-                  return ["dashboard", "profile", "inbox", "users"].includes(activeSubTab);
-                }
-                return activeSubTab === tab.id;
-              })();
+          <div className="flex items-center space-x-4">
+            {/* Notification Bell Icon */}
+            <button className="relative transition p-1.5 rounded-full text-gray-400 hover:text-white hover:bg-white/5">
+              <Bell className="h-5 w-5" />
+              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+            </button>
 
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    if (tab.id === "profile") {
-                      handleTabChange("dashboard");
-                    } else {
-                      handleTabChange(tab.id as any);
-                    }
-                  }}
-                  className={`flex items-center space-x-2 rounded-xl px-3 sm:px-4 py-2 text-xs font-bold uppercase tracking-wider transition whitespace-nowrap cursor-pointer border ${
-                    isTabActive
-                      ? "bg-purple-600 text-white shadow-lg shadow-purple-600/20 border-purple-500/30"
-                      : "text-gray-400 hover:text-white hover:bg-white/5 border-transparent"
-                  }`}
-                >
-                  <tab.icon className="h-3.5 w-3.5 shrink-0" />
-                  <span>{tab.label}</span>
-                  {tab.isLive && (
-                    <span className="h-2 w-2 rounded-full bg-[#00e676] animate-pulse" />
-                  )}
-                </button>
-              );
-            })}
+            <div className="h-5 w-px bg-white/10" />
+
+            {/* Logout/Çıkış Button */}
+            <button
+              onClick={onClose}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-black text-red-500 hover:text-red-400 transition border border-red-500/20 cursor-pointer uppercase tracking-wider bg-red-500/5 hover:bg-red-500/10"
+              title="Kapat"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Çıkış</span>
+            </button>
           </div>
         </div>
 
-        {/* Scrollable Main Content Container */}
-        <div ref={scrollContainerRef} className="flex-1 p-4 sm:p-6 overflow-y-auto custom-scrollbar flex flex-col justify-between">
+        {/* Scrollable Content Workspace */}
+        <div 
+          ref={scrollContainerRef} 
+          className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar bg-[#0c0d16] text-white"
+        >
           <AnimatePresence mode="wait">
             <motion.div
               key={activeSubTab}
-              initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
+              initial={{ opacity: 0, y: 10, filter: "blur(2px)" }}
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
-              transition={{ duration: 0.18, ease: "easeInOut" }}
+              exit={{ opacity: 0, y: -10, filter: "blur(2px)" }}
+              transition={{ duration: 0.15, ease: "easeInOut" }}
               className="flex-1"
             >
             {/* Sub Tabs for Profil Category (Dashboard, Profile edit, Inbox, Registered users) */}
@@ -1305,16 +1355,16 @@ export default function AdminPanelModal({
                     onClick={() => {
                       handleTabChange(subTab.id as any);
                     }}
-                    className={`flex items-center space-x-1.5 sm:space-x-2 rounded-xl px-2.5 sm:px-3.5 py-1.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider transition cursor-pointer border ${
+                    className={`flex items-center space-x-1.5 sm:space-x-2 rounded-xl px-3 py-1.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider transition cursor-pointer border ${
                       activeSubTab === subTab.id
-                        ? "bg-purple-600/15 border border-purple-500/30 text-purple-400"
+                        ? "bg-purple-600/15 border-purple-500/30 text-purple-400"
                         : "text-gray-400 hover:text-white hover:bg-white/5 border-white/5 bg-[#0e0f1a]"
                     }`}
                   >
                     <subTab.icon className="h-3 w-3 shrink-0" />
                     <span>{subTab.label}</span>
                     {subTab.badge !== undefined && subTab.badge > 0 && (
-                      <span className="bg-purple-600 text-white rounded-full px-1.5 py-0.5 text-[9px] font-black leading-none">
+                      <span className="bg-red-500 text-white rounded-full px-1.5 py-0.5 text-[8px] font-black leading-none">
                         {subTab.badge}
                       </span>
                     )}
@@ -1324,9 +1374,9 @@ export default function AdminPanelModal({
             )}
 
             {/* Section Header */}
-            <div className="flex items-center justify-between border-b border-white/5 pb-3 mb-5">
-              <h2 className="font-display text-xs sm:text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-purple-500 animate-pulse shrink-0" />
+            <div className="flex items-center justify-between border-b pb-3 mb-5 border-white/5">
+              <h2 className="font-display text-xs sm:text-sm font-extrabold uppercase tracking-wider flex items-center gap-2 text-white">
+                <span className="h-1.5 w-1.5 rounded-full animate-pulse shrink-0 bg-purple-500" />
                 {activeSubTab === "dashboard" && "Genel Bakış"}
                 {activeSubTab === "profile" && "Site Profilini Düzenle"}
                 {activeSubTab === "settings" && "Sistem & CS2 Oyun Ayarları"}
@@ -1343,7 +1393,7 @@ export default function AdminPanelModal({
 
             {/* Notification alert banner */}
             {savedSuccess && (
-              <div className="mb-5 flex items-center gap-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-3 text-xs font-semibold">
+              <div className="mb-5 flex items-center gap-2 rounded-2xl px-4 py-3 text-xs font-semibold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
                 <Check className="h-4 w-4 shrink-0" />
                 <span>Değişiklikler başarıyla kaydedildi!</span>
               </div>
@@ -1351,134 +1401,231 @@ export default function AdminPanelModal({
 
             {/* Tab: Dashboard Overview */}
             {activeSubTab === "dashboard" && (
-              <div className="space-y-6">
-                {/* Stats Widgets Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {/* Stat 1: Stream */}
-                  <div className="p-4 sm:p-5 rounded-2xl bg-[#11121d] border border-white/5 flex flex-col justify-between relative overflow-hidden group hover:border-purple-500/30 transition-all duration-300">
-                    <div className="absolute top-0 right-0 h-24 w-24 bg-purple-500/5 rounded-full blur-2xl group-hover:bg-purple-500/10 transition-colors" />
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest">Yayın Durumu</span>
-                      <Radio className={`h-4 w-4 ${isStreamLive ? "text-[#00e676] animate-pulse" : "text-gray-500"}`} />
+              <div className="space-y-6 text-gray-200 font-sans">
+                {/* 4 Colored stats widgets (Cyan, Green, Yellow, Red) styled beautifully as dark glassmorphic panels */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                  {/* Stat 1: Cyan (Toplam Kullanıcı) */}
+                  <div className="rounded-xl border border-cyan-500/15 bg-cyan-500/5 text-cyan-400 relative overflow-hidden flex flex-col justify-between group">
+                    <div className="absolute top-4 right-4 text-cyan-500/10 group-hover:text-cyan-500/15 transition-all duration-300">
+                      <Users className="h-16 w-16" />
                     </div>
-                    <div>
-                      <span className="text-xl font-black text-white block">
-                        {isStreamLive ? "CANLI" : "ÇEVRİMDIŞI"}
-                      </span>
-                      <span className="text-[9px] text-gray-500 font-bold block uppercase tracking-wider mt-1">
-                        {isStreamLive ? `${Number(streamViewers).toLocaleString("tr-TR")} İZLEYİCİ` : "YAYIN YAPILMIYOR"}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Stat 2: Messages */}
-                  <div 
-                    onClick={() => handleTabChange("inbox")} 
-                    className="p-4 sm:p-5 rounded-2xl bg-[#11121d] border border-white/5 flex flex-col justify-between relative overflow-hidden group hover:border-purple-500/30 transition-all duration-300 cursor-pointer"
-                  >
-                    <div className="absolute top-0 right-0 h-24 w-24 bg-blue-500/5 rounded-full blur-2xl" />
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-mono text-blue-400 uppercase tracking-widest">Gelen Kutusu</span>
-                      <Mail className="h-4 w-4 text-blue-400" />
-                    </div>
-                    <div>
-                      <span className="text-xl font-black text-white block">
-                        {messages.length}
-                      </span>
-                      <span className="text-[9px] text-gray-500 font-bold block uppercase tracking-wider mt-1 hover:text-blue-300 transition-colors">
-                        MESAJLARA GİT →
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Stat 3: Registered Users */}
-                  <div 
-                    onClick={() => handleTabChange("users")} 
-                    className="p-4 sm:p-5 rounded-2xl bg-[#11121d] border border-white/5 flex flex-col justify-between relative overflow-hidden group hover:border-purple-500/30 transition-all duration-300 cursor-pointer"
-                  >
-                    <div className="absolute top-0 right-0 h-24 w-24 bg-pink-500/5 rounded-full blur-2xl" />
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-mono text-pink-400 uppercase tracking-widest">Kayıtlı Üyeler</span>
-                      <Users className="h-4 w-4 text-pink-400" />
-                    </div>
-                    <div>
-                      <span className="text-xl font-black text-white block">
+                    <div className="p-6 relative z-10">
+                      <span className="text-4xl font-extrabold tracking-tight block text-cyan-300">
                         {registeredUsers.length}
                       </span>
-                      <span className="text-[9px] text-gray-500 font-bold block uppercase tracking-wider mt-1 hover:text-pink-300 transition-colors">
-                        ÜYELERİ YÖNET →
+                      <span className="text-sm font-semibold tracking-wide block mt-1 text-cyan-400/80 uppercase">
+                        Toplam Kullanıcı
                       </span>
                     </div>
+                    <button 
+                      onClick={() => handleTabChange("users")}
+                      className="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 py-2.5 px-6 text-[10px] font-black uppercase tracking-wider flex items-center justify-center space-x-2 transition cursor-pointer border-t border-cyan-500/20"
+                    >
+                      <span>Detaylar</span>
+                      <span className="text-[10px]">➔</span>
+                    </button>
                   </div>
 
-                  {/* Stat 4: Crosshairs */}
-                  <div 
-                    onClick={() => handleTabChange("crosshairs")} 
-                    className="p-4 sm:p-5 rounded-2xl bg-[#11121d] border border-white/5 flex flex-col justify-between relative overflow-hidden group hover:border-purple-500/30 transition-all duration-300 cursor-pointer"
-                  >
-                    <div className="absolute top-0 right-0 h-24 w-24 bg-[#00e676]/5 rounded-full blur-2xl" />
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-mono text-[#00e676] uppercase tracking-widest">Crosshairler</span>
-                      <Target className="h-4 w-4 text-[#00e676]" />
+                  {/* Stat 2: Green (Toplam Menü) */}
+                  <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 text-emerald-400 relative overflow-hidden flex flex-col justify-between group">
+                    <div className="absolute top-4 right-4 text-emerald-500/10 group-hover:text-emerald-500/15 transition-all duration-300">
+                      <Target className="h-16 w-16" />
                     </div>
-                    <div>
-                      <span className="text-xl font-black text-white block">
+                    <div className="p-6 relative z-10">
+                      <span className="text-4xl font-extrabold tracking-tight block text-emerald-300">
                         {crosshairs.length}
                       </span>
-                      <span className="text-[9px] text-gray-500 font-bold block uppercase tracking-wider mt-1 hover:text-[#00e676] transition-colors">
-                        GALERİYİ DÜZENLE →
+                      <span className="text-sm font-semibold tracking-wide block mt-1 text-emerald-400/80 uppercase">
+                        Toplam Menü (Crosshair)
+                      </span>
+                    </div>
+                    <button 
+                      onClick={() => handleTabChange("crosshairs")}
+                      className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 py-2.5 px-6 text-[10px] font-black uppercase tracking-wider flex items-center justify-center space-x-2 transition cursor-pointer border-t border-emerald-500/20"
+                    >
+                      <span>Detaylar</span>
+                      <span className="text-[10px]">➔</span>
+                    </button>
+                  </div>
+
+                  {/* Stat 3: Yellow/Orange (Galeri Öğesi) */}
+                  <div className="rounded-xl border border-amber-500/15 bg-amber-500/5 text-amber-400 relative overflow-hidden flex flex-col justify-between group">
+                    <div className="absolute top-4 right-4 text-amber-500/10 group-hover:text-amber-500/15 transition-all duration-300">
+                      <Image className="h-16 w-16" />
+                    </div>
+                    <div className="p-6 relative z-10">
+                      <span className="text-4xl font-extrabold tracking-tight block text-amber-300">
+                        {playlists.length}
+                      </span>
+                      <span className="text-sm font-semibold tracking-wide block mt-1 text-amber-400/80 uppercase">
+                        Galeri Öğesi (YouTube)
+                      </span>
+                    </div>
+                    <button 
+                      onClick={() => handleTabChange("playlists")}
+                      className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 py-2.5 px-6 text-[10px] font-black uppercase tracking-wider flex items-center justify-center space-x-2 transition cursor-pointer border-t border-amber-500/20"
+                    >
+                      <span>Detaylar</span>
+                      <span className="text-[10px]">➔</span>
+                    </button>
+                  </div>
+
+                  {/* Stat 4: Red (Toplam Rezervasyon) */}
+                  <div className="rounded-xl border border-rose-500/15 bg-rose-500/5 text-rose-400 relative overflow-hidden flex flex-col justify-between group">
+                    <div className="absolute top-4 right-4 text-rose-500/10 group-hover:text-rose-500/15 transition-all duration-300">
+                      <Mail className="h-16 w-16" />
+                    </div>
+                    <div className="p-6 relative z-10">
+                      <span className="text-4xl font-extrabold tracking-tight block text-rose-300">
+                        {messages.length}
+                      </span>
+                      <span className="text-sm font-semibold tracking-wide block mt-1 text-rose-400/80 uppercase">
+                        Toplam Rezervasyon (Mesajlar)
+                      </span>
+                    </div>
+                    <button 
+                      onClick={() => handleTabChange("inbox")}
+                      className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 py-2.5 px-6 text-[10px] font-black uppercase tracking-wider flex items-center justify-center space-x-2 transition cursor-pointer border-t border-rose-500/20"
+                    >
+                      <span>Detaylar</span>
+                      <span className="text-[10px]">➔</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Smaller Status Card Row (4 sleek dark panels) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                  {/* Card 1: Bugünün Rezervasyonları */}
+                  <div className="bg-[#11121d] rounded-xl border border-white/5 p-4 flex items-center space-x-4">
+                    <div className="p-3 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-lg">
+                      <Eye className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block leading-none">Bugünün Rezervasyonları</span>
+                      <span className="text-lg font-black text-white mt-1.5 block">0</span>
+                    </div>
+                  </div>
+
+                  {/* Card 2: Menüler */}
+                  <div className="bg-[#11121d] rounded-xl border border-white/5 p-4 flex items-center space-x-4">
+                    <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg">
+                      <Radio className={`h-5 w-5 ${isStreamLive ? "animate-pulse" : ""}`} />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block leading-none">Aktif Menüler (Yayın)</span>
+                      <span className="text-lg font-black text-white mt-1.5 block">
+                        {isStreamLive ? "CANLI" : "OFFLINE"}
                       </span>
                     </div>
                   </div>
 
-                  {/* Stat 5: Visitor Counter */}
-                  <div 
-                    onClick={() => {
-                      const el = document.getElementById("visitor-counter-section");
-                      if (el) {
-                        el.scrollIntoView({ behavior: "smooth" });
-                      }
-                    }}
-                    className="p-4 sm:p-5 rounded-2xl bg-[#11121d] border border-white/5 flex flex-col justify-between relative overflow-hidden group hover:border-purple-500/30 transition-all duration-300 cursor-pointer col-span-2 md:col-span-1"
-                  >
-                    <div className="absolute top-0 right-0 h-24 w-24 bg-amber-500/5 rounded-full blur-2xl" />
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-mono text-amber-400 uppercase tracking-widest">Tekil Ziyaretçi</span>
-                      <Eye className="h-4 w-4 text-amber-400" />
+                  {/* Card 3: Toplam Sayfa */}
+                  <div className="bg-[#11121d] rounded-xl border border-white/5 p-4 flex items-center space-x-4">
+                    <div className="p-3 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-lg">
+                      <Cpu className="h-5 w-5" />
                     </div>
                     <div>
-                      <span className="text-xl font-black text-white block">
-                        {visitorCount.toLocaleString("tr-TR")}
-                      </span>
-                      <span className="text-[9px] text-gray-500 font-bold block uppercase tracking-wider mt-1 hover:text-amber-300 transition-colors">
-                        SAYACI YÖNET →
-                      </span>
+                      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block leading-none">Toplam Sayfa (Donanım)</span>
+                      <span className="text-lg font-black text-white mt-1.5 block">{systemSpecs.length}</span>
+                    </div>
+                  </div>
+
+                  {/* Card 4: Ziyaretçi Sayacı */}
+                  <div className="bg-[#11121d] rounded-xl border border-white/5 p-4 flex items-center space-x-4">
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-lg">
+                      <Eye className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block leading-none">Ziyaretçi Sayacı</span>
+                      <span className="text-lg font-black text-white mt-1.5 block">{visitorCount.toLocaleString("tr-TR")}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Quick Stream Simulator Controls Panel */}
-                <div className="p-6 rounded-3xl bg-gradient-to-br from-[#11121d] to-[#0e0f17] border border-white/5 relative overflow-hidden space-y-6">
-                  <div className="absolute top-0 right-0 h-40 w-40 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
-                  
-                  <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+                {/* 3 Panels with Colored Header ribbons styled in premium glassmorphic dark mode */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+                  {/* Ribbon 1: Yaklaşan Rezervasyonlar (Teal Header) */}
+                  <div className="bg-[#11121d] rounded-xl border border-white/5 overflow-hidden flex flex-col">
+                    <div className="bg-cyan-500/10 border-b border-cyan-500/20 text-cyan-400 px-4 py-3.5 font-bold text-xs uppercase tracking-wider flex justify-between items-center">
+                      <div className="flex items-center space-x-2">
+                        <Eye className="h-4.5 w-4.5" />
+                        <span>Yaklaşan Rezervasyonlar</span>
+                      </div>
+                      <span className="bg-cyan-500/20 text-cyan-300 text-[10px] px-2.5 py-0.5 rounded-full font-black font-mono">0</span>
+                    </div>
+                    <div className="p-6 flex-1 flex flex-col justify-center items-center text-center text-gray-400 text-xs py-10">
+                      <p className="font-semibold">Planlanan veya yaklaşan bir rezervasyon bulunamadı.</p>
+                    </div>
+                  </div>
+
+                  {/* Ribbon 2: Okunmamış Mesajlar (Yellow/Orange Header) */}
+                  <div className="bg-[#11121d] rounded-xl border border-white/5 overflow-hidden flex flex-col">
+                    <div className="bg-amber-500/10 border-b border-amber-500/20 text-amber-400 px-4 py-3.5 font-bold text-xs uppercase tracking-wider flex justify-between items-center">
+                      <div className="flex items-center space-x-2">
+                        <Mail className="h-4.5 w-4.5" />
+                        <span>Okunmamış Mesajlar</span>
+                      </div>
+                      <span className="bg-amber-500/20 text-amber-300 text-[10px] px-2.5 py-0.5 rounded-full font-black font-mono">
+                        {messages.filter(m => !m.read).length}
+                      </span>
+                    </div>
+                    <div className="p-4 flex-1 space-y-3 max-h-[160px] overflow-y-auto custom-scrollbar">
+                      {messages.filter(m => !m.read).length === 0 ? (
+                        <div className="text-center text-gray-400 text-xs py-10 font-semibold">
+                          Tüm mesajlar okundu!
+                        </div>
+                      ) : (
+                        messages.filter(m => !m.read).slice(0, 3).map((msg) => (
+                          <div 
+                            key={msg.id}
+                            onClick={() => handleTabChange("inbox")}
+                            className="p-3 rounded-xl bg-[#161825] border border-white/5 hover:border-amber-500/25 hover:bg-[#1b1e2e] transition cursor-pointer text-left animate-fade-in"
+                          >
+                            <div className="flex justify-between text-[10px] text-gray-400 font-bold">
+                              <span className="text-amber-400">{msg.name}</span>
+                              <span>{msg.date || "Yeni"}</span>
+                            </div>
+                            <p className="text-xs text-gray-300 truncate mt-1">{msg.message}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Ribbon 3: Onay Bekleyen Rezervasyonlar (Red Header) */}
+                  <div className="bg-[#11121d] rounded-xl border border-white/5 overflow-hidden flex flex-col">
+                    <div className="bg-rose-500/10 border-b border-rose-500/20 text-rose-400 px-4 py-3.5 font-bold text-xs uppercase tracking-wider flex justify-between items-center">
+                      <div className="flex items-center space-x-2">
+                        <Check className="h-4.5 w-4.5" />
+                        <span>Onay Bekleyenler</span>
+                      </div>
+                      <span className="bg-rose-500/20 text-rose-300 text-[10px] px-2.5 py-0.5 rounded-full font-black font-mono">0</span>
+                    </div>
+                    <div className="p-6 flex-1 flex flex-col justify-center items-center text-center text-gray-400 text-xs py-10">
+                      <p className="font-semibold">Onay bekleyen kayıt veya işlem bulunmuyor.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Kick API & Stream Simulation Section */}
+                <div className="p-6 rounded-xl bg-[#11121d] border border-white/5 shadow-sm space-y-6 mt-6">
+                  <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className={`h-2 w-2 rounded-full ${isStreamLive ? "bg-[#00e676] animate-pulse" : "bg-red-500"}`} />
+                        <span className={`h-2.5 w-2.5 rounded-full ${isStreamLive ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`} />
                         <span className="text-[10px] font-mono font-bold text-purple-400 uppercase tracking-widest">
                           Yayın Durumu & Kick API Entegrasyonu
                         </span>
                       </div>
-                      <h3 className="font-display text-lg font-extrabold text-white uppercase tracking-wider">
+                      <h3 className="font-display text-base font-extrabold text-white uppercase tracking-wider">
                         Otomatik Kick API Simülasyonu
                       </h3>
-                      <p className="text-xs text-gray-400 max-w-xl font-medium leading-relaxed">
+                      <p className="text-xs text-gray-400 max-w-xl leading-relaxed">
                         Kick API kanallarını otomatik dinleyen arka plan servisini aktifleştirin. API etkinleştirildiğinde harici yayın durumunuza göre canlı göstergesi otomatik tetiklenir ve izleyici sayısı dalgalanır.
                       </p>
                     </div>
 
-                    <div className="flex flex-wrap gap-3">
-                      {/* Manual Override Button */}
+                    <div className="flex flex-wrap gap-2.5">
                       {!kickApiEnabled && (
                         <button
                           type="button"
@@ -1492,17 +1639,16 @@ export default function AdminPanelModal({
                               nextLive ? "success" : "info"
                             );
                           }}
-                          className={`rounded-xl px-5 py-2.5 text-[11px] font-black uppercase tracking-wider transition duration-300 cursor-pointer ${
+                          className={`rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-wider transition duration-300 cursor-pointer ${
                             isStreamLive 
-                              ? "bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(220,38,38,0.3)]" 
-                              : "bg-[#00e676]/20 border border-[#00e676]/40 hover:bg-[#00e676]/30 text-[#00e676]"
+                              ? "bg-red-600 hover:bg-red-500 text-white shadow-[0_4px_12px_rgba(220,38,38,0.2)]" 
+                              : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_4px_12px_rgba(16,185,129,0.2)]"
                           }`}
                         >
                           {isStreamLive ? "MANUEL YAYINI KAPAT" : "MANUEL YAYINI BAŞLAT"}
                         </button>
                       )}
 
-                      {/* API Sync Toggle */}
                       <button
                         type="button"
                         onClick={() => {
@@ -1517,10 +1663,10 @@ export default function AdminPanelModal({
                             );
                           }
                         }}
-                        className={`rounded-xl px-5 py-2.5 text-[11px] font-black uppercase tracking-wider transition duration-300 cursor-pointer ${
+                        className={`rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-wider transition duration-300 cursor-pointer border ${
                           kickApiEnabled 
-                            ? "bg-[#00e676] hover:bg-[#00c853] text-black shadow-[0_0_15px_rgba(0,230,118,0.3)]" 
-                            : "bg-white/5 hover:bg-white/10 text-gray-300 border border-white/5"
+                            ? "bg-purple-600 text-white border-purple-600 hover:bg-purple-700 shadow-sm" 
+                            : "bg-white/5 text-gray-300 border-white/10 hover:bg-white/10"
                         }`}
                       >
                         {kickApiEnabled ? "⚡ API SENKRONİZASYONU: AKTİF" : "🔌 API SENKRONİZASYONU BAŞLAT"}
@@ -1528,7 +1674,6 @@ export default function AdminPanelModal({
                     </div>
                   </div>
 
-                  {/* Simulated API Developer Tools and Interactive Operations */}
                   {kickApiEnabled && (
                     <div className="relative z-10 border-t border-white/5 pt-4 flex flex-wrap items-center justify-between gap-4">
                       <div className="flex items-center gap-2">
@@ -1537,54 +1682,50 @@ export default function AdminPanelModal({
                           <button
                             type="button"
                             onClick={() => {
-                              // Simulate custom spike
                               if (onSaveStreamViewers) {
                                 onSaveStreamViewers("1850");
                                 showToast("Simüle Edilen API: Ani izleyici patlaması (+450 izleyici) tetiklendi!", "success");
                               }
                             }}
-                            className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition cursor-pointer"
+                            className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/25 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition cursor-pointer"
                           >
                             📈 İzleyici Patlaması (+450)
                           </button>
                           <button
                             type="button"
                             onClick={() => {
-                              // Simulate stream disconnection
                               setIsStreamLive(false);
                               if (onToggleKickApi) {
                                 onToggleKickApi(false);
                               }
                               showToast("API Entegrasyonu: Yayın bağlantı kesintisi simüle edildi. Sistem otomatik OFFLINE moduna düştü!", "error");
                             }}
-                            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition cursor-pointer"
+                            className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/25 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition cursor-pointer"
                           >
                             💥 Bağlantı Kesintisi (Crash)
                           </button>
                         </div>
                       </div>
-                      <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider animate-pulse">
+                      <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider animate-pulse font-mono">
                         ● API VERİLERİ HER 4 SANİYEDE BİR OTO-SORGULANIYOR
                       </span>
                     </div>
                   )}
 
-                  {/* Terminal Log Console Component */}
-                  <div className="rounded-xl border border-white/5 bg-[#090a10] overflow-hidden">
-                    {/* Console Header */}
-                    <div className="flex items-center justify-between px-4 py-2 border-b border-white/5 bg-[#0d0e15] text-[10px] font-mono font-bold text-gray-500 uppercase tracking-wider">
+                  {/* Terminal Log Console */}
+                  <div className="rounded-xl border border-white/5 bg-black/40 overflow-hidden shadow-xs">
+                    <div className="flex items-center justify-between px-4 py-2 border-b border-white/5 bg-black/60 text-[10px] font-mono font-bold text-gray-400 uppercase tracking-wider">
                       <div className="flex items-center gap-2">
                         <div className="flex gap-1.5">
-                          <span className="h-2 w-2 rounded-full bg-red-500/60" />
-                          <span className="h-2 w-2 rounded-full bg-yellow-500/60" />
-                          <span className="h-2 w-2 rounded-full bg-green-500/60" />
+                          <span className="h-2 w-2 rounded-full bg-red-500/80" />
+                          <span className="h-2 w-2 rounded-full bg-yellow-500/80" />
+                          <span className="h-2 w-2 rounded-full bg-green-500/80" />
                         </div>
                         <span>kick-api-polling-service.log</span>
                       </div>
-                      <span className="text-purple-400 animate-pulse">LIVE MONITOR</span>
+                      <span className="text-emerald-400 animate-pulse font-black font-mono">LIVE MONITOR</span>
                     </div>
-                    {/* Console Body */}
-                    <div className="p-3 sm:p-4 h-[120px] overflow-y-auto font-mono text-[10px] sm:text-xs text-green-400/95 space-y-1 scrollbar-thin scrollbar-thumb-white/5">
+                    <div className="p-3 sm:p-4 h-[120px] overflow-y-auto font-mono text-[10px] sm:text-xs text-emerald-400 space-y-1 custom-scrollbar">
                       {kickApiLogs && kickApiLogs.length > 0 ? (
                         kickApiLogs.map((log, idx) => (
                           <div 
@@ -1593,23 +1734,24 @@ export default function AdminPanelModal({
                               log.includes("kesintisi") || log.includes("durum") || log.includes("kapatıldı") || log.includes("durduruldu") || log.includes("SYSTEM")
                                 ? "text-purple-400" 
                                 : log.includes("200 OK") 
-                                ? "text-green-400" 
-                                : "text-gray-400"
+                                ? "text-green-400 font-bold" 
+                                : "text-gray-300"
                             }`}
                           >
                             {log}
                           </div>
                         ))
                       ) : (
-                        <div className="text-gray-600 italic">Simülatör logları bekleniyor...</div>
+                        <div className="text-gray-500 italic">Simülatör logları bekleniyor...</div>
                       )}
                     </div>
                   </div>
                 </div>
 
-                {/* Tarayıcı Bildirim Ayarları Kontrolü */}
-                <div id="browser-notifications-section" className="p-6 rounded-3xl bg-[#11121d] border border-white/5 space-y-4">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                {/* Visitor Counter & Notification Control Center */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  {/* Browser Notifications Control */}
+                  <div className="p-6 rounded-xl bg-[#11121d] border border-white/5 shadow-sm space-y-4">
                     <div>
                       <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest block font-bold mb-1">
                         🔔 MASAÜSTÜ BİLDİRİM SİSTEMİ
@@ -1617,88 +1759,78 @@ export default function AdminPanelModal({
                       <h3 className="font-display text-sm font-extrabold text-white uppercase tracking-wider">
                         Canlı Yayın Bildirim Ayarları
                       </h3>
-                      <p className="text-xs text-gray-400 font-medium leading-relaxed max-w-xl">
-                        Yayıncı canlı yayına başladığında tarayıcınızda anlık 'Canlı Yayına Girdi' bildirimi gönderilmesini kontrol edin. Bildirim gönderme durumu aktifleştirilmeden önce tarayıcı izni istenir.
+                      <p className="text-xs text-gray-400 font-medium leading-relaxed mt-1">
+                        Yayıncı canlı yayına başladığında tarayıcınızda anlık 'Canlı Yayına Girdi' bildirimi gönderilmesini kontrol edin.
                       </p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (onToggleNotifications) {
-                          onToggleNotifications();
-                        }
-                      }}
-                      className={`rounded-xl px-5 py-2.5 text-[11px] font-black uppercase tracking-wider transition duration-300 cursor-pointer ${
-                        notificationsEnabled 
-                          ? "bg-[#00e676] hover:bg-[#00c853] text-black shadow-[0_0_15px_rgba(0,230,118,0.3)]" 
-                          : "bg-white/5 hover:bg-white/10 text-gray-300 border border-white/5"
-                      }`}
-                    >
-                      {notificationsEnabled ? "🔔 BİLDİRİMLER: AÇIK" : "🔕 BİLDİRİMLER: KAPALI"}
-                    </button>
-                  </div>
-
-                  {/* Permission and test tool details */}
-                  <div className="pt-3 border-t border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 text-[10px] font-mono text-gray-400">
-                      <span>Tarayıcı İzin Durumu:</span>
-                      <span className={`px-2 py-0.5 rounded font-black uppercase text-[9px] ${
-                        typeof window !== "undefined" && "Notification" in window
-                          ? Notification.permission === "granted"
-                            ? "bg-green-500/10 text-green-400"
-                            : Notification.permission === "denied"
-                            ? "bg-red-500/10 text-red-400"
-                            : "bg-yellow-500/10 text-yellow-400"
-                          : "bg-red-500/10 text-red-400"
-                      }`}>
-                        {typeof window !== "undefined" && "Notification" in window
-                          ? Notification.permission
-                          : "Not Supported"}
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-                          try {
-                            new Notification("Test Bildirimi 🔔", {
-                              body: "Yayın bildirim sistemi aktif! Canlı yayınlar başladığında bu şekilde bilgilendirileceksiniz.",
-                              icon: profile.profilePhoto || "https://images.unsplash.com/photo-1566492031773-4f4e44671857?q=80&w=200&auto=format&fit=crop"
-                            });
-                            showToast("Test bildirimi başarıyla gönderildi!", "success");
-                          } catch (err) {
-                            showToast("Masaüstü bildirimi gönderilemedi. Iframe içerisinde olabilirsiniz.", "info");
+                    <div className="flex justify-between items-center pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onToggleNotifications) {
+                            onToggleNotifications();
                           }
-                        } else {
-                          showToast("Lütfen önce yukarıdan bildirimleri açarak izin verin.", "error");
-                        }
-                      }}
-                      className="text-[10px] font-bold text-purple-400 hover:text-purple-300 uppercase tracking-widest transition cursor-pointer"
-                    >
-                      ⚡ TEST BİLDİRİMİ GÖNDER
-                    </button>
-                  </div>
-                </div>
+                        }}
+                        className={`rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider transition duration-300 cursor-pointer ${
+                          notificationsEnabled 
+                            ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm" 
+                            : "bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10"
+                        }`}
+                      >
+                        {notificationsEnabled ? "🔔 BİLDİRİMLER: AÇIK" : "🔕 BİLDİRİMLER: KAPALI"}
+                      </button>
 
-                {/* Ziyaretçi Sayacı Kontrolü */}
-                <div id="visitor-counter-section" className="p-6 rounded-3xl bg-[#11121d] border border-white/5 space-y-4">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+                            try {
+                              new Notification("Test Bildirimi 🔔", {
+                                body: "Yayın bildirim sistemi aktif! Canlı yayınlar başladığında bu şekilde bilgilendirileceksiniz.",
+                                icon: profile.profilePhoto || "https://images.unsplash.com/photo-1566492031773-4f4e44671857?q=80&w=200&auto=format&fit=crop"
+                              });
+                              showToast("Test bildirimi başarıyla gönderildi!", "success");
+                            } catch (err) {
+                              showToast("Masaüstü bildirimi gönderilemedi. Iframe içerisinde olabilirsiniz.", "info");
+                            }
+                          } else {
+                            showToast("Lütfen önce bildirimleri açarak izin verin.", "error");
+                          }
+                        }}
+                        className="text-[10px] font-black text-purple-400 hover:text-purple-300 uppercase tracking-widest transition cursor-pointer"
+                      >
+                        ⚡ TEST BİLDİRİMİ GÖNDER
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Visitor Counter Control */}
+                  <div className="p-6 rounded-xl bg-[#11121d] border border-white/5 shadow-sm space-y-4">
                     <div>
                       <span className="text-[10px] font-mono text-amber-400 uppercase tracking-widest block font-bold mb-1">
                         👁️ ZİYARETÇİ SAYACI YÖNETİMİ
                       </span>
                       <h3 className="font-display text-sm font-extrabold text-white uppercase tracking-wider">
-                        Tekil Ziyaretçi Sayacı Ayarları
+                        Tekil Ziyaretçi Sayacı
                       </h3>
-                      <p className="text-xs text-gray-400 font-medium leading-relaxed max-w-xl">
-                        Sitenize gelen tekil ziyaretçi sayısını simüle edin veya başlangıç sayısını değiştirin. Her yeni tarayıcı ziyaretinde bu sayaç otomatik olarak 1 artar.
+                      <p className="text-xs text-gray-400 font-medium leading-relaxed mt-1">
+                        Sitenize gelen tekil ziyaretçi sayısını simüle edin veya başlangıç sayısını değiştirin.
                       </p>
                     </div>
 
-                    {/* Quick increment buttons */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        value={visitorCount}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          if (onSaveVisitorCount && !isNaN(val)) {
+                            onSaveVisitorCount(val);
+                          }
+                        }}
+                        className="w-full rounded-xl bg-[#131522] border border-white/5 px-4 py-2 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
+                      />
                       <button
                         type="button"
                         onClick={() => {
@@ -1707,9 +1839,9 @@ export default function AdminPanelModal({
                             showToast("Sayaca +100 tekil ziyaretçi eklendi!", "success");
                           }
                         }}
-                        className="rounded-xl bg-[#221f1c] hover:bg-[#2d2822] border border-amber-500/10 hover:border-amber-500/25 px-3 py-2 text-[10px] font-bold text-amber-400 transition cursor-pointer"
+                        className="rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs px-3 font-bold transition cursor-pointer border border-amber-500/25"
                       >
-                        +100 Ziyaretçi
+                        +100
                       </button>
                       <button
                         type="button"
@@ -1719,70 +1851,25 @@ export default function AdminPanelModal({
                             showToast("Sayaca +1,000 tekil ziyaretçi eklendi!", "success");
                           }
                         }}
-                        className="rounded-xl bg-[#221f1c] hover:bg-[#2d2822] border border-amber-500/10 hover:border-amber-500/25 px-3 py-2 text-[10px] font-bold text-amber-400 transition cursor-pointer"
+                        className="rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs px-3 font-bold transition cursor-pointer border border-transparent"
                       >
-                        +1,000 Ziyaretçi
+                        +1K
                       </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-white/5">
-                    {/* Current counter display input */}
-                    <div className="space-y-1.5 col-span-2">
-                      <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block">
-                        Mevcut Sayaç Değeri (Tekil Ziyaretçiler)
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="number"
-                          value={visitorCount}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value, 10);
-                            if (onSaveVisitorCount && !isNaN(val)) {
-                              onSaveVisitorCount(val);
-                            }
-                          }}
-                          placeholder="Örn: 2450"
-                          className="w-full rounded-xl bg-[#0c0d16] border border-white/5 px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 font-bold"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (onSaveVisitorCount) {
-                              onSaveVisitorCount(0);
-                              showToast("Sayaç başarıyla sıfırlandı.", "info");
-                            }
-                          }}
-                          className="rounded-xl bg-red-600/15 hover:bg-red-600/25 border border-red-500/20 text-red-400 text-xs px-4 font-bold transition cursor-pointer"
-                        >
-                          Sıfırla
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Stats insight card */}
-                    <div className="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/10 flex flex-col justify-center">
-                      <div className="text-[10px] font-mono text-amber-400/80 uppercase font-bold tracking-widest mb-1">
-                        Sistem Raporu
-                      </div>
-                      <div className="text-xs text-amber-200 font-semibold leading-normal">
-                        Kayıtlı {registeredUsers.length} üyeye karşılık, {visitorCount} tekil ziyaret oranı tespit edildi.
-                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Main Dynamic Simulation Metadata Panel */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Stream Customizer */}
-                  <div className="p-6 rounded-3xl bg-[#11121d] border border-white/5 space-y-4">
+                {/* Rapid System Utilities & Stream Parameters */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  {/* Stream Title Customizer */}
+                  <div className="p-6 rounded-xl bg-[#11121d] border border-white/5 shadow-sm space-y-4">
                     <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest block font-bold">
                       YAYIN PARAMETRE AYARLARI
                     </span>
 
-                    <div className="space-y-3.5">
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block">
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
                           Yayın Başlığı (Simulated Stream Title)
                         </label>
                         <input
@@ -1790,34 +1877,34 @@ export default function AdminPanelModal({
                           value={streamTitle}
                           onChange={(e) => onSaveStreamTitle(e.target.value)}
                           placeholder="Örn: Rekabetçi Maçlar & Topluluk Yayını"
-                          className="w-full rounded-xl bg-[#0c0d16] border border-white/5 px-4 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
+                          className="w-full rounded-xl bg-[#131522] border border-white/5 px-4 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block">
-                            Kategori (Game/Category)
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+                            Kategori (Game)
                           </label>
                           <input
                             type="text"
                             value={streamCategory}
                             onChange={(e) => onSaveStreamCategory(e.target.value)}
                             placeholder="Counter-Strike 2"
-                            className="w-full rounded-xl bg-[#0c0d16] border border-white/5 px-4 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
+                            className="w-full rounded-xl bg-[#131522] border border-white/5 px-4 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
                           />
                         </div>
 
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block">
-                            Simüle İzleyici Sayısı
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+                            İzleyiciler
                           </label>
                           <input
                             type="text"
                             value={streamViewers}
                             onChange={(e) => onSaveStreamViewers(e.target.value)}
                             placeholder="1400"
-                            className="w-full rounded-xl bg-[#0c0d16] border border-white/5 px-4 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
+                            className="w-full rounded-xl bg-[#131522] border border-white/5 px-4 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
                           />
                         </div>
                       </div>
@@ -1825,24 +1912,24 @@ export default function AdminPanelModal({
                   </div>
 
                   {/* Quick System Utilities */}
-                  <div className="p-6 rounded-3xl bg-[#11121d] border border-white/5 space-y-4 flex flex-col justify-between">
+                  <div className="p-6 rounded-xl bg-[#11121d] border border-white/5 shadow-sm space-y-4 flex flex-col justify-between">
                     <div>
-                      <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest block font-bold mb-3">
+                      <span className="text-[10px] font-mono text-rose-400 uppercase tracking-widest block font-bold mb-1">
                         HIZLI SİSTEM ARAÇLARI
                       </span>
-                      <p className="text-xs text-gray-400 mb-4 font-medium leading-relaxed">
+                      <p className="text-xs text-gray-400 leading-relaxed font-medium">
                         Sitenizin düzgün çalıştığını test etmek için gelen kutusuna otomatik olarak rastgele kullanıcı mesajları ekleyebilir veya tüm bilgileri sıfırlayabilirsiniz.
                       </p>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                       <button
                         type="button"
                         onClick={handleGenerateMockMessage}
-                        className="w-full flex items-center justify-between rounded-xl bg-purple-600/10 hover:bg-purple-600/20 border border-purple-500/20 text-xs text-purple-300 font-bold px-4 py-3.5 transition group cursor-pointer"
+                        className="flex items-center justify-center gap-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/25 text-xs text-purple-400 font-bold py-2.5 transition cursor-pointer"
                       >
-                        <span className="uppercase tracking-wider">Test Mesajı Üret (Gelen Kutusu İçin)</span>
-                        <MessageSquare className="h-4 w-4 text-purple-400 group-hover:scale-110 transition" />
+                        <MessageSquare className="h-4 w-4 shrink-0" />
+                        <span>Mesaj Üret</span>
                       </button>
 
                       <button
@@ -1853,41 +1940,39 @@ export default function AdminPanelModal({
                             loadMessages();
                           }
                         }}
-                        className="w-full flex items-center justify-between rounded-xl bg-red-600/10 hover:bg-red-600/20 border border-red-500/20 text-xs text-red-400 font-bold px-4 py-3.5 transition group cursor-pointer"
+                        className="flex items-center justify-center gap-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 text-xs text-rose-400 font-bold py-2.5 transition cursor-pointer"
                       >
-                        <span className="uppercase tracking-wider">Mesaj Geçmişini Sıfırla</span>
-                        <RefreshCw className="h-4 w-4 text-red-400 group-hover:rotate-180 transition duration-500" />
+                        <RefreshCw className="h-4 w-4 shrink-0" />
+                        <span>Sıfırla</span>
                       </button>
                     </div>
                   </div>
                 </div>
 
-                {/* Full-width Backup/Restore Card */}
-                <div className="p-6 rounded-3xl bg-[#11121d] border border-white/5 space-y-4 mt-6">
+                {/* Backup & Restore Panel */}
+                <div className="p-6 rounded-xl bg-[#11121d] border border-white/5 shadow-sm space-y-4 mt-6">
                   <div>
-                    <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest block font-bold mb-1.5">
+                    <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest block font-bold mb-1">
                       💾 PORTAL VERİ SİSTEMİ YEDEKLEME & RESTORE
                     </span>
-                    <h4 className="text-sm font-bold text-white uppercase tracking-wider">
-                      TÜM SİTE AYARLARINI YEDEKLE VEYA GERİ YÜKLE
+                    <h4 className="text-xs font-extrabold text-white uppercase tracking-wider">
+                      Tüm Site Ayarlarını Yedekle veya Geri Yükle
                     </h4>
                     <p className="text-xs text-gray-400 font-medium leading-relaxed mt-1">
-                      Profil resminiz, sosyal medya linkleriniz, donanım özellikleriniz (specs), duyurularınız, nişangahlarınız (crosshairs), YouTube çalma listeleriniz ve tüm site ayarlarınızı tek tıkla JSON dosyası olarak bilgisayarınıza indirebilir, daha sonra tekrar yükleyerek anında sitenizi eski haline döndürebilirsiniz.
+                      Profil resminiz, sosyal medya linkleriniz, donanım özellikleriniz (specs), duyurularınız, nişangahlarınız (crosshairs), YouTube çalma listeleriniz ve tüm site ayarlarınızı tek tıkla JSON dosyası olarak yedekleyin.
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                    {/* Export Action */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                     <button
                       type="button"
                       onClick={handleExportBackup}
-                      className="flex items-center justify-center gap-2.5 rounded-2xl bg-purple-600 hover:bg-purple-500 text-xs font-black uppercase tracking-widest text-white py-4 transition shadow-[0_4px_15px_rgba(168,85,247,0.35)] cursor-pointer"
+                      className="flex items-center justify-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs font-bold uppercase tracking-wider text-white py-3 transition shadow-sm cursor-pointer"
                     >
-                      <Download className="h-4.5 w-4.5" />
-                      <span>AYARLARI DIŞA AKTAR (EXPORT JSON)</span>
+                      <Download className="h-4 w-4 shrink-0" />
+                      <span>Yedek Al (Export)</span>
                     </button>
 
-                    {/* Import Action */}
                     <div className="relative">
                       <input
                         id="backup-import-file-input"
@@ -1899,10 +1984,10 @@ export default function AdminPanelModal({
                       <button
                         type="button"
                         onClick={() => document.getElementById("backup-import-file-input")?.click()}
-                        className="w-full flex items-center justify-center gap-2.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-black uppercase tracking-widest text-white py-4 transition cursor-pointer"
+                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold uppercase tracking-wider text-gray-300 py-3 transition cursor-pointer"
                       >
-                        <Upload className="h-4.5 w-4.5 text-purple-400" />
-                        <span>YEDEKTEN GERİ YÜKLE (IMPORT JSON)</span>
+                        <Upload className="h-4 w-4 text-gray-500 shrink-0" />
+                        <span>Yükle (Import JSON)</span>
                       </button>
                     </div>
                   </div>
@@ -4870,7 +4955,7 @@ export default function AdminPanelModal({
 
         </div>
 
-      </motion.div>
+      </div>
 
       {/* Custom Delete Confirmation Modal */}
       <AnimatePresence>

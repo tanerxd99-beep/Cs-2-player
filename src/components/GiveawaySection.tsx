@@ -291,6 +291,10 @@ export default function GiveawaySection({ translations, lang, currentUser }: Giv
   // Reset or start custom giveaway
   const handleCreateCustomGiveaway = (e: React.FormEvent) => {
     e.preventDefault();
+    if (currentUser?.role !== "admin") {
+      alert(lang === "TR" ? "Sadece yöneticiler çekiliş oluşturabilir!" : "Only administrators can create giveaways!");
+      return;
+    }
     if (customPrize.trim() === "") return;
 
     // Terminate any active giveaway first
@@ -325,11 +329,19 @@ export default function GiveawaySection({ translations, lang, currentUser }: Giv
   };
 
   const handleDeleteGiveaway = (id: string) => {
+    if (currentUser?.role !== "admin") {
+      alert(lang === "TR" ? "Sadece yöneticiler çekiliş silebilir!" : "Only administrators can delete giveaways!");
+      return;
+    }
     const filtered = giveaways.filter(g => g.id !== id);
     saveAndSetGiveaways(filtered);
   };
 
   const handleResetToDefaults = () => {
+    if (currentUser?.role !== "admin") {
+      alert(lang === "TR" ? "Sadece yöneticiler çekiliş verilerini sıfırlayabilir!" : "Only administrators can reset giveaway data!");
+      return;
+    }
     if (confirm(lang === "TR" ? "Çekiliş verilerini sıfırlamak istiyor musunuz?" : "Do you want to reset giveaways to defaults?")) {
       saveAndSetGiveaways(DEFAULT_GIVEAWAYS);
     }
@@ -360,13 +372,15 @@ export default function GiveawaySection({ translations, lang, currentUser }: Giv
             </button>
           )}
 
-          <button
-            onClick={handleResetToDefaults}
-            className="flex items-center justify-center rounded-xl border border-white/5 bg-[#12131a] hover:bg-white/5 text-gray-400 hover:text-white p-2.5 transition cursor-pointer"
-            title={lang === "TR" ? "Varsayılana Sıfırla" : "Reset to Defaults"}
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
+          {currentUser?.role === "admin" && (
+            <button
+              onClick={handleResetToDefaults}
+              className="flex items-center justify-center rounded-xl border border-white/5 bg-[#12131a] hover:bg-white/5 text-gray-400 hover:text-white p-2.5 transition cursor-pointer"
+              title={lang === "TR" ? "Varsayılana Sıfırla" : "Reset to Defaults"}
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
 
