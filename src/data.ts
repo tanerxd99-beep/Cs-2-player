@@ -245,7 +245,14 @@ export const TRANSLATIONS: Record<"TR" | "EN", TranslationDict> = {
     footerDesc: "CS2 Yayıncısı & İçerik Üreticisi.",
     footerSocial: "SOSYAL MEDYA",
     footerOther: "DİĞER",
-    footerRights: "TÜM HAKLAR SAKLIDIR."
+    footerRights: "TÜM HAKLAR SAKLIDIR.",
+
+    navGiveaway: "Çekiliş",
+    navCommunity: "Topluluk",
+    giveawayTitle: "İNTERAKTİF ÇEKİLİŞ",
+    giveawaySub: "Hediyeler ve Ödüller",
+    communityTitle: "TOPLULUK DUVARI",
+    communitySub: "İzleyici Mesajları ve Selamlar"
   },
   EN: {
     navHome: "Home",
@@ -316,6 +323,79 @@ export const TRANSLATIONS: Record<"TR" | "EN", TranslationDict> = {
     footerDesc: "CS2 Streamer & Content Creator.",
     footerSocial: "SOCIAL",
     footerOther: "OTHER",
-    footerRights: "ALL RIGHTS RESERVED."
+    footerRights: "ALL RIGHTS RESERVED.",
+
+    navGiveaway: "Giveaway",
+    navCommunity: "Community",
+    giveawayTitle: "INTERACTIVE RAFFLE",
+    giveawaySub: "Giveaways & Rewards",
+    communityTitle: "COMMUNITY WALL",
+    communitySub: "Viewer Messages & Greetings"
   }
 };
+
+export const DEFAULT_GIVEAWAYS = [
+  {
+    id: "giveaway-active",
+    prize: "M4A4 | Temukau (Field-Tested)",
+    descriptionTR: "Canlı yayın kutlaması şerefine muazzam CS2 kaplaması çekilişi! Katıl butonuna basıp adını listeye yazdır, canlı kura çekimini izle.",
+    descriptionEN: "A magnificent CS2 skin giveaway in honor of our livestream celebration! Hit join, write your name, and watch the live raffle drawing.",
+    endTime: new Date(Date.now() + 1200000).toISOString(), // 20 mins from now
+    status: "active" as const,
+    winner: null,
+    entrants: ["cs2_pro_99", "kick_enjoyer", "faceit_demon", "shroud_junior", "heatoN_fan", "lozan_fani", "unlost_pro", "cs2_caner"],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "giveaway-completed-1",
+    prize: "AK-47 | Ice Cooled (Minimal Wear)",
+    descriptionTR: "Faceit 10 Level kutlama çekilişi. Kazanan şanslı izleyicimize teslim edildi.",
+    descriptionEN: "Faceit Level 10 celebration giveaway. Transferred to our lucky winner.",
+    endTime: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+    status: "completed" as const,
+    winner: "LozanGamer",
+    entrants: ["cs2_pro_99", "LozanGamer", "faceit_demon", "heatoN_fan", "unlost_pro", "berkay_v1"],
+    createdAt: new Date(Date.now() - 90000000).toISOString()
+  }
+];
+
+export const DEFAULT_COMMUNITY_POSTS = [
+  {
+    id: "post-pinned-1",
+    authorName: "İnan",
+    authorAvatar: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?q=80&w=200&auto=format&fit=crop",
+    badge: "streamer" as const,
+    content: "Topluluk Duvarımıza hoş geldiniz beyler! 🎉 Buradan selamlarınızı iletebilir, yayınlar hakkındaki düşüncelerinizi yazabilirsiniz. Saygılı ve keyifli bir ortam olsun. Akşama saat 19:00'da canlı yayında görüşmek üzere! 🔴🚀",
+    timestamp: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
+    likes: 42,
+    isPinned: true
+  },
+  {
+    id: "post-1",
+    authorName: "Berkay_CS",
+    authorAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop",
+    badge: "sub" as const,
+    content: "Dün akşamki Faceit maçında attığın 1v5 clutch efsaneydi abi! Klip aldım, Discord klipler kanalına atıyorum hemen.",
+    timestamp: new Date(Date.now() - 1800000).toISOString(), // 30 mins ago
+    likes: 12
+  },
+  {
+    id: "post-2",
+    authorName: "SlayerCS2",
+    authorAvatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=200&auto=format&fit=crop",
+    badge: "vip" as const,
+    content: "CS2 crosshair ve fare hassasiyeti ayarlarını kopyaladım, Dust 2'de direkt tek atmaya başladım. Cidden çok rahatmış, eyvallah cansın! 🔫🔥",
+    timestamp: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+    likes: 7
+  },
+  {
+    id: "post-3",
+    authorName: "Ayşe_19",
+    authorAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop",
+    badge: "user" as const,
+    content: "Yayın kalitesi ve sohbet harika, her akşam çayımı alıp keyifle izliyorum. Başarılar İnan abi! ☕🌸",
+    timestamp: new Date(Date.now() - 10800000).toISOString(), // 3 hours ago
+    likes: 9
+  }
+];
+

@@ -15,6 +15,7 @@ import AdminPanelModal from "./components/AdminPanelModal";
 import { UserProfile } from "./components/EditProfileModal";
 import CS2SettingsSection, { CS2SettingsData } from "./components/CS2SettingsSection";
 import CrosshairSection, { DEFAULT_CROSSHAIRS } from "./components/CrosshairSection";
+import GiveawaySection from "./components/GiveawaySection";
 import { TRANSLATIONS, PLAYLISTS, SYSTEM_SPECS } from "./data";
 import { CrosshairItem, PlaylistItem, SpecItem, Announcement } from "./types";
 import AnnouncementSection from "./components/AnnouncementSection";
@@ -677,6 +678,22 @@ export default function App() {
               transition={{ duration: 0.25 }}
             >
               <YouTubeSection translations={translations} playlists={playlists} />
+            </motion.div>
+          )}
+
+          {activeSection === "giveaway" && (
+            <motion.div
+              key="giveaway"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.25 }}
+            >
+              <GiveawaySection 
+                translations={translations} 
+                lang={lang} 
+                currentUser={currentUser}
+              />
             </motion.div>
           )}
 

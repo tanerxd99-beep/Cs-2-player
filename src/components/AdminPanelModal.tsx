@@ -5,12 +5,13 @@ import {
   Settings2, Trash2, Check, RefreshCw, MessageSquare, AlertCircle, Award,
   Upload, Smartphone, Sliders, Play, Info, Plus, Target, ExternalLink,
   LayoutDashboard, Radio, Eye, Activity, Youtube, Megaphone, Cpu, Layers, Bell,
-  Sparkles, Download
+  Sparkles, Download, Gift, Trophy, Search, Filter, CheckCheck, Copy, MailOpen
 } from "lucide-react";
 import { UserProfile } from "./EditProfileModal";
 import { UserAccount } from "./AuthModal";
 import { CS2SettingsData } from "./CS2SettingsSection";
-import { CrosshairItem, PlaylistItem, SpecItem, Announcement } from "../types";
+import { CrosshairItem, PlaylistItem, SpecItem, Announcement, GiveawayItem } from "../types";
+import { DEFAULT_GIVEAWAYS } from "../data";
 
 const ANNOUNCEMENT_TEMPLATES = [
   {
@@ -106,6 +107,7 @@ interface MessageInboxItem {
   email: string;
   message: string;
   date: string;
+  read?: boolean;
 }
 
 const AVATAR_PRESETS = [
@@ -192,7 +194,7 @@ export default function AdminPanelModal({
   notificationsEnabled = false,
   onToggleNotifications
 }: AdminPanelModalProps) {
-  const [activeSubTab, setActiveSubTab] = useState<"dashboard" | "profile" | "settings" | "inbox" | "users" | "stream" | "crosshairs" | "playlists" | "specs" | "announcements">("dashboard");
+  const [activeSubTab, setActiveSubTab] = useState<"dashboard" | "profile" | "settings" | "inbox" | "users" | "stream" | "crosshairs" | "playlists" | "specs" | "announcements" | "giveaways">("dashboard");
   const [formData, setFormData] = useState<UserProfile>({ ...profile });
   const [settingsForm, setSettingsForm] = useState<CS2SettingsData>({ ...cs2Settings });
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -382,6 +384,14 @@ export default function AdminPanelModal({
   const [messages, setMessages] = useState<MessageInboxItem[]>([]);
   const [registeredUsers, setRegisteredUsers] = useState<UserAccount[]>([]);
 
+  // Search, Filter, and Reader States for Inbox & Registered Users
+  const [inboxSearch, setInboxSearch] = useState("");
+  const [inboxFilter, setInboxFilter] = useState<"all" | "read" | "unread">("all");
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+
+  const [userSearch, setUserSearch] = useState("");
+  const [userRoleFilter, setUserRoleFilter] = useState<"all" | "admin" | "user">("all");
+
   // Drag and Drop Upload States
   const [isDragging, setIsDragging] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -554,7 +564,23 @@ export default function AdminPanelModal({
     const updated = messages.filter(m => m.id !== id);
     setMessages(updated);
     localStorage.setItem("weew_messages", JSON.stringify(updated));
+    if (selectedMessageId === id) {
+      setSelectedMessageId(null);
+    }
     showToast("Mesaj başarıyla silindi!", "success");
+  };
+
+  const handleToggleMessageRead = (id: string) => {
+    const updated = messages.map(m => m.id === id ? { ...m, read: !m.read } : m);
+    setMessages(updated);
+    localStorage.setItem("weew_messages", JSON.stringify(updated));
+  };
+
+  const handleMarkAllMessagesRead = () => {
+    const updated = messages.map(m => ({ ...m, read: true }));
+    setMessages(updated);
+    localStorage.setItem("weew_messages", JSON.stringify(updated));
+    showToast("Tüm mesajlar okundu olarak işaretlendi!", "success");
   };
 
   const handleDeleteUser = (emailToDelete: string) => {
@@ -573,6 +599,28 @@ export default function AdminPanelModal({
         showToast("Kayıtlı üye başarıyla silindi!", "success");
       } catch (e) {
         showToast("Üye silinirken bir hata oluştu.", "error");
+      }
+    }
+  };
+
+  const handleUpdateUserRole = (emailToUpdate: string, newRole: "admin" | "user") => {
+    if (emailToUpdate === "iremsaltanat002001@gmail.com") {
+      showToast("Kurucu admin rolü değiştirilemez!", "error");
+      return;
+    }
+
+    const raw = localStorage.getItem("weew_registered_users");
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed[emailToUpdate]) {
+          parsed[emailToUpdate].role = newRole;
+          localStorage.setItem("weew_registered_users", JSON.stringify(parsed));
+          loadRegisteredUsers();
+          showToast(`Kullanıcı rolü '${newRole.toUpperCase()}' olarak güncellendi!`, "success");
+        }
+      } catch (e) {
+        showToast("Rol güncellenirken bir hata oluştu.", "error");
       }
     }
   };
@@ -906,6 +954,243 @@ export default function AdminPanelModal({
   };
 
 
+  // ==========================================
+  // Giveaway Management States & Handlers
+  // ==========================================
+  const [giveaways, setGiveaways] = useState<GiveawayItem[]>(() => {
+    const saved = localStorage.getItem("weew_giveaways");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // ignore
+      }
+    }
+    return DEFAULT_GIVEAWAYS;
+  });
+
+  // Keep synced with any changes
+  useEffect(() => {
+    const handleSync = () => {
+      const saved = localStorage.getItem("weew_giveaways");
+      if (saved) {
+        try {
+          setGiveaways(JSON.parse(saved));
+        } catch (e) {
+          // ignore
+        }
+      }
+    };
+    window.addEventListener("weew_giveaway_update", handleSync);
+    window.addEventListener("storage", handleSync);
+    return () => {
+      window.removeEventListener("weew_giveaway_update", handleSync);
+      window.removeEventListener("storage", handleSync);
+    };
+  }, []);
+
+  const saveAdminGiveaways = (updated: GiveawayItem[]) => {
+    setGiveaways(updated);
+    localStorage.setItem("weew_giveaways", JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent("weew_giveaway_update"));
+  };
+
+  const [newGiveawayPrize, setNewGiveawayPrize] = useState("");
+  const [newGiveawayDescTR, setNewGiveawayDescTR] = useState("");
+  const [newGiveawayDescEN, setNewGiveawayDescEN] = useState("");
+  const [newGiveawayDuration, setNewGiveawayDuration] = useState("30"); // in minutes
+  const [isCreatingGiveaway, setIsCreatingGiveaway] = useState(false);
+  const [newEntrantName, setNewEntrantName] = useState("");
+
+  const handleCreateGiveaway = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGiveawayPrize.trim()) {
+      showToast("Lütfen ödül adını giriniz!", "error");
+      return;
+    }
+
+    // Cancel all active giveaways first
+    const updatedGiveaways = giveaways.map(g => {
+      if (g.status === "active") {
+        return {
+          ...g,
+          status: "cancelled" as const,
+          endTime: new Date().toISOString()
+        };
+      }
+      return g;
+    });
+
+    const durationMin = Number(newGiveawayDuration) || 30;
+    const newGiveaway: GiveawayItem = {
+      id: `giveaway-${Date.now()}`,
+      prize: newGiveawayPrize.trim(),
+      descriptionTR: newGiveawayDescTR.trim() || "Özel topluluk çekilişi! Hemen adını yazdırıp şansını dene.",
+      descriptionEN: newGiveawayDescEN.trim() || "Special community giveaway! Put down your name and test your luck.",
+      endTime: new Date(Date.now() + durationMin * 60000).toISOString(),
+      status: "active" as const,
+      winner: null,
+      entrants: currentUser ? [currentUser.name] : [],
+      createdAt: new Date().toISOString()
+    };
+
+    saveAdminGiveaways([newGiveaway, ...updatedGiveaways]);
+    setNewGiveawayPrize("");
+    setNewGiveawayDescTR("");
+    setNewGiveawayDescEN("");
+    setIsCreatingGiveaway(false);
+    showToast("Yeni interaktif çekiliş başarıyla başlatıldı!", "success");
+  };
+
+  const handleDeleteGiveaway = (id: string) => {
+    const updated = giveaways.filter(g => g.id !== id);
+    saveAdminGiveaways(updated);
+    showToast("Çekiliş başarıyla silindi!", "success");
+  };
+
+  const handleCancelGiveaway = (id: string) => {
+    const updated = giveaways.map(g => {
+      if (g.id === id) {
+        return { ...g, status: "cancelled" as const, endTime: new Date().toISOString() };
+      }
+      return g;
+    });
+    saveAdminGiveaways(updated);
+    showToast("Çekiliş iptal edildi!", "info");
+  };
+
+  const handleAddManualEntrant = (giveawayId: string) => {
+    if (!newEntrantName.trim()) return;
+    const target = giveaways.find(g => g.id === giveawayId);
+    if (!target) return;
+
+    if (target.entrants.includes(newEntrantName.trim())) {
+      showToast("Bu kullanıcı zaten çekilişe katılmış!", "error");
+      return;
+    }
+
+    const updated = giveaways.map(g => {
+      if (g.id === giveawayId) {
+        return { ...g, entrants: [...g.entrants, newEntrantName.trim()] };
+      }
+      return g;
+    });
+
+    saveAdminGiveaways(updated);
+    setNewEntrantName("");
+    showToast(`${newEntrantName.trim()} çekilişe manuel olarak eklendi!`, "success");
+  };
+
+  const handleKickEntrant = (giveawayId: string, nameToKick: string) => {
+    const updated = giveaways.map(g => {
+      if (g.id === giveawayId) {
+        return { ...g, entrants: g.entrants.filter(e => e !== nameToKick) };
+      }
+      return g;
+    });
+    saveAdminGiveaways(updated);
+    showToast(`${nameToKick} çekilişten çıkarıldı!`, "info");
+  };
+
+  const handleAddMockEntrants = (giveawayId: string) => {
+    const botNames = [
+      "cs2_pro_99", "kick_enjoyer", "faceit_demon", "shroud_junior", "heatoN_fan", 
+      "lozan_fani", "unlost_pro", "cs2_caner", "reaper_cs", "s1mple_junior", 
+      "headshot_machine", "berk_pasha", "wooting_keyboard_user", "aimstar", "toxic_clutcher",
+      "rush_b_dont_stop", "flashbang_enjoyer", "dragon_lore_owner", "hyper_beast"
+    ];
+
+    const target = giveaways.find(g => g.id === giveawayId);
+    if (!target) return;
+
+    // Filter bots not already in entrants
+    const availableBots = botNames.filter(b => !target.entrants.includes(b));
+    if (availableBots.length === 0) {
+      showToast("Eklenebilecek daha fazla bot kalmadı!", "error");
+      return;
+    }
+
+    // Add 5 random bots or all available
+    const countToAdd = Math.min(5, availableBots.length);
+    const shuffledBots = [...availableBots].sort(() => Math.random() - 0.5).slice(0, countToAdd);
+
+    const updated = giveaways.map(g => {
+      if (g.id === giveawayId) {
+        return { ...g, entrants: [...g.entrants, ...shuffledBots] };
+      }
+      return g;
+    });
+
+    saveAdminGiveaways(updated);
+    showToast(`${countToAdd} adet simüle katılımcı eklendi!`, "success");
+  };
+
+  const handleAdminDrawGiveaway = (giveawayId: string) => {
+    const target = giveaways.find(g => g.id === giveawayId);
+    if (!target) return;
+    if (target.entrants.length === 0) {
+      showToast("Çekilişi gerçekleştirmek için en az 1 katılımcı olmalıdır!", "error");
+      return;
+    }
+
+    // Generate parameters for the live visual spin
+    const list = [...target.entrants];
+    const shuffledList = [...list].sort(() => Math.random() - 0.5);
+    let spinStrip: string[] = [];
+    while (spinStrip.length < 50) {
+      spinStrip = [...spinStrip, ...shuffledList.sort(() => Math.random() - 0.5)];
+    }
+
+    const winningIndex = Math.floor(Math.random() * 8) + 38; // somewhere between 38 and 45
+    const winnerName = spinStrip[winningIndex];
+
+    // Broadcast the drawing trigger to everyone instantly
+    const trigger = {
+      giveawayId: target.id,
+      winner: winnerName,
+      winningIndex,
+      spinList: spinStrip,
+      timestamp: Date.now()
+    };
+    
+    localStorage.setItem("weew_active_spin_trigger", JSON.stringify(trigger));
+    window.dispatchEvent(new CustomEvent("weew_active_spin_trigger_fired", { detail: trigger }));
+
+    showToast(`Canlı kura çarkı başlatıldı! Kazanan belirleniyor...`, "info");
+
+    // Automatically update the database / state after the spin finishes (5 seconds)
+    setTimeout(() => {
+      const currentSaved = localStorage.getItem("weew_giveaways");
+      if (currentSaved) {
+        try {
+          const parsed: GiveawayItem[] = JSON.parse(currentSaved);
+          const updated = parsed.map(g => {
+            if (g.id === target.id && g.status === "active") {
+              return {
+                ...g,
+                status: "completed" as const,
+                winner: winnerName,
+                endTime: new Date().toISOString()
+              };
+            }
+            return g;
+          });
+          saveAdminGiveaways(updated);
+        } catch (e) {
+          // ignore
+        }
+      }
+    }, 5000);
+  };
+
+  const handleResetGiveawaysToDefault = () => {
+    if (confirm("Tüm çekiliş verilerini varsayılana döndürmek istediğinize emin misiniz?")) {
+      saveAdminGiveaways(DEFAULT_GIVEAWAYS);
+      showToast("Çekiliş verileri sıfırlandı!", "success");
+    }
+  };
+
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
@@ -958,6 +1243,7 @@ export default function AdminPanelModal({
               { id: "settings", label: "Sistem Ayarları", icon: Settings2 },
               { id: "specs", label: "Donanım / Ekipman", icon: Sliders },
               { id: "announcements", label: "Duyuru Paneli", icon: Megaphone },
+              { id: "giveaways", label: "Çekilişler", icon: Gift },
             ].map((tab) => {
               // Determine active state
               const isTabActive = (() => {
@@ -1051,6 +1337,7 @@ export default function AdminPanelModal({
                 {activeSubTab === "playlists" && "YouTube Oynatma Listesi Yönetimi"}
                 {activeSubTab === "specs" && "Sistem Donanım & Ekipman Özellikleri Yönetimi"}
                 {activeSubTab === "announcements" && "Duyuru Paneli Yönetimi"}
+                {activeSubTab === "giveaways" && "İnteraktif Çekiliş Yönetim Merkezi"}
               </h2>
             </div>
 
@@ -2490,46 +2777,260 @@ export default function AdminPanelModal({
 
             {/* Tab: Message Inbox */}
             {activeSubTab === "inbox" && (
-              <div className="space-y-4">
+              <div className="space-y-5">
+                {/* Header Actions / Stats Row */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#11121d] p-4 rounded-2xl border border-white/5">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-purple-600/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                      <Mail className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-display text-sm font-extrabold text-white uppercase tracking-wider">
+                        İLETİŞİM GELEN KUTUSU
+                      </h3>
+                      <p className="text-[10px] text-gray-400 font-semibold mt-0.5">
+                        Toplam <span className="text-white font-black">{messages.length}</span> mesaj | <span className="text-purple-400 font-black">{messages.filter(m => !m.read).length}</span> okunmamış mesaj var.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto self-end sm:self-center">
+                    {messages.length > 0 && (
+                      <button
+                        onClick={handleMarkAllMessagesRead}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl border border-white/5 bg-[#0e0f1a] hover:bg-white/5 text-gray-400 hover:text-white px-3.5 py-2 text-[10px] font-black uppercase tracking-wider transition cursor-pointer"
+                        title="Tümünü Okundu Yap"
+                      >
+                        <CheckCheck className="h-3.5 w-3.5 text-purple-400" />
+                        Tümünü Oku
+                      </button>
+                    )}
+                    <button
+                      onClick={handleGenerateMockMessage}
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl bg-purple-600/10 hover:bg-purple-600 text-purple-400 hover:text-white border border-purple-500/20 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider transition cursor-pointer"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Test Mesajı
+                    </button>
+                  </div>
+                </div>
+
                 {messages.length === 0 ? (
-                  <div className="text-center py-12 bg-white/5 border border-white/5 rounded-3xl flex flex-col items-center">
-                    <MessageSquare className="h-10 w-10 text-gray-500 mb-3" />
-                    <p className="text-sm text-gray-400 font-bold uppercase tracking-wider">Gelen kutusu boş</p>
-                    <p className="text-xs text-gray-500 mt-1">İletişim formundan gönderilen mesajlar burada listelenir.</p>
+                  <div className="text-center py-16 bg-[#11121d] border border-white/5 rounded-3xl flex flex-col items-center">
+                    <div className="h-12 w-12 rounded-2xl bg-white/5 flex items-center justify-center text-gray-600 mb-3 border border-white/5">
+                      <MessageSquare className="h-6 w-6" />
+                    </div>
+                    <p className="text-sm text-gray-400 font-black uppercase tracking-wider">Gelen kutunuz boş</p>
+                    <p className="text-xs text-gray-500 mt-1">İletişim formundan gönderilen izleyici mesajları burada listelenir.</p>
                   </div>
                 ) : (
-                  <div className="space-y-3 max-h-[50vh] overflow-y-auto custom-scrollbar pr-1">
-                    {messages.map((msg) => (
-                      <div 
-                        key={msg.id}
-                        className="p-4 rounded-2xl bg-white/5 border border-white/5 relative group hover:border-purple-500/30 transition"
-                      >
-                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-2">
-                          <div>
-                            <span className="text-sm font-extrabold text-white uppercase tracking-tight block">
-                              {msg.name}
-                            </span>
-                            <span className="text-xs text-purple-400 font-mono">
-                              {msg.email}
-                            </span>
-                          </div>
-                          <span className="text-[10px] font-mono text-gray-500 font-bold uppercase shrink-0">
-                            {msg.date}
-                          </span>
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    
+                    {/* Left Pane: Message List */}
+                    <div className="lg:col-span-5 space-y-3">
+                      {/* Search & Filter bar */}
+                      <div className="bg-[#11121d] p-3 rounded-2xl border border-white/5 space-y-2.5">
+                        <div className="relative">
+                          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
+                          <input
+                            type="text"
+                            value={inboxSearch}
+                            onChange={(e) => setInboxSearch(e.target.value)}
+                            placeholder="Mesajlarda ara (isim, e-posta, içerik)..."
+                            className="w-full h-9 pl-9 pr-4 rounded-xl bg-[#090a12] border border-white/5 text-xs text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none transition"
+                          />
                         </div>
-                        <p className="text-xs sm:text-sm text-gray-300 bg-black/20 p-3 rounded-xl border border-white/5 leading-relaxed">
-                          {msg.message}
-                        </p>
-
-                        <button
-                          onClick={() => handleDeleteMessage(msg.id)}
-                          className="absolute bottom-4 right-4 h-8 w-8 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition border border-red-500/20"
-                          title="Mesajı Sil"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {/* Filter pills */}
+                        <div className="flex gap-1.5 border-t border-white/5 pt-2">
+                          {(["all", "unread", "read"] as const).map((filter) => (
+                            <button
+                              key={filter}
+                              onClick={() => {
+                                setInboxFilter(filter);
+                                setSelectedMessageId(null);
+                              }}
+                              className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition cursor-pointer border ${
+                                inboxFilter === filter
+                                  ? "bg-purple-600 border-purple-500 text-white"
+                                  : "bg-[#090a12] border-white/5 text-gray-500 hover:text-white"
+                              }`}
+                            >
+                              {filter === "all" ? "Tümü" : filter === "unread" ? "Okunmamış" : "Okunmuş"}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    ))}
+
+                      {/* Scrollable List */}
+                      <div className="space-y-2 max-h-[45vh] overflow-y-auto custom-scrollbar pr-1">
+                        {(() => {
+                          const filtered = messages.filter(msg => {
+                            const matchesSearch = 
+                              msg.name.toLowerCase().includes(inboxSearch.toLowerCase()) || 
+                              msg.email.toLowerCase().includes(inboxSearch.toLowerCase()) || 
+                              msg.message.toLowerCase().includes(inboxSearch.toLowerCase());
+                            if (inboxFilter === "unread") return matchesSearch && !msg.read;
+                            if (inboxFilter === "read") return matchesSearch && msg.read;
+                            return matchesSearch;
+                          });
+
+                          if (filtered.length === 0) {
+                            return (
+                              <div className="text-center py-8 bg-[#11121d]/40 rounded-2xl border border-dashed border-white/5 text-gray-500">
+                                <span className="text-[10px] font-bold uppercase tracking-wider block">Mesaj bulunamadı</span>
+                                <p className="text-[9px] text-gray-600 mt-0.5">Arama veya filtre kriterlerinizi değiştirin.</p>
+                              </div>
+                            );
+                          }
+
+                          return filtered.map((msg) => {
+                            const isSelected = selectedMessageId === msg.id;
+                            const isUnread = !msg.read;
+                            return (
+                              <div
+                                key={msg.id}
+                                onClick={() => {
+                                  setSelectedMessageId(msg.id);
+                                  if (isUnread) handleToggleMessageRead(msg.id);
+                                }}
+                                className={`p-3.5 rounded-2xl text-left border cursor-pointer relative transition duration-200 group ${
+                                  isSelected
+                                    ? "bg-[#18152c] border-purple-500 shadow-md shadow-purple-600/10"
+                                    : "bg-[#11121d] border-white/5 hover:border-white/10 hover:bg-[#151727]"
+                                }`}
+                              >
+                                {isUnread && (
+                                  <div className="absolute top-4 right-4 h-2 w-2 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)] animate-pulse" />
+                                )}
+                                <div className="pr-5">
+                                  <div className="flex justify-between items-start gap-2 mb-1">
+                                    <span className="text-xs font-black text-white uppercase tracking-tight block truncate max-w-[150px]">
+                                      {msg.name}
+                                    </span>
+                                    <span className="text-[9px] font-mono text-gray-500 font-bold shrink-0">
+                                      {msg.date.split(" ")[0]}
+                                    </span>
+                                  </div>
+                                  <span className="text-[10px] text-purple-400 font-mono block truncate mb-1.5">
+                                    {msg.email}
+                                  </span>
+                                  <p className="text-[11px] text-gray-400 font-semibold line-clamp-1 leading-normal">
+                                    {msg.message}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Right Pane: Message Detail View */}
+                    <div className="lg:col-span-7 h-full">
+                      {(() => {
+                        const selectedMsg = messages.find(m => m.id === selectedMessageId);
+                        if (!selectedMsg) {
+                          return (
+                            <div className="h-[350px] flex flex-col items-center justify-center bg-[#11121d] border border-white/5 rounded-2xl p-6 text-center">
+                              <div className="h-14 w-14 rounded-2xl bg-[#090a12] border border-white/5 flex items-center justify-center text-purple-500/40 mb-3 shadow-inner">
+                                <MailOpen className="h-6 w-6" />
+                              </div>
+                              <span className="text-[11px] text-gray-400 font-black uppercase tracking-wider block">OKUMAK İÇİN BİR MESAJ SEÇİN</span>
+                              <p className="text-[10px] text-gray-600 font-semibold mt-1">Sol listeden tıklayarak mesaj detaylarını görüntüleyebilir ve yanıtlayabilirsiniz.</p>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="bg-[#11121d] border border-white/5 rounded-2xl p-5 space-y-4 relative overflow-hidden flex flex-col text-left">
+                            {/* Decorative ambient background */}
+                            <div className="absolute top-0 right-0 h-40 w-40 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
+                            
+                            {/* Detail Header */}
+                            <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-3 border-b border-white/5 pb-4">
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-2xl bg-purple-600/10 border border-purple-500/20 text-purple-400 font-black text-sm flex items-center justify-center shrink-0">
+                                  {selectedMsg.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <span className="text-sm font-extrabold text-white uppercase tracking-tight block truncate">
+                                    {selectedMsg.name}
+                                  </span>
+                                  <a 
+                                    href={`mailto:${selectedMsg.email}`}
+                                    className="text-[11px] text-purple-400 font-mono hover:underline inline-flex items-center gap-1"
+                                  >
+                                    {selectedMsg.email}
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 self-start sm:self-auto font-mono text-[10px] text-gray-500 font-bold uppercase shrink-0">
+                                <span>{selectedMsg.date}</span>
+                              </div>
+                            </div>
+
+                            {/* Status Control */}
+                            <div className="flex justify-between items-center bg-[#090a12]/70 px-3.5 py-2.5 rounded-xl border border-white/5">
+                              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">MESAJ OKUMA DURUMU</span>
+                              <button
+                                onClick={() => handleToggleMessageRead(selectedMsg.id)}
+                                className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition cursor-pointer border ${
+                                  selectedMsg.read 
+                                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" 
+                                    : "bg-purple-500/10 border-purple-500/20 text-purple-400"
+                                }`}
+                              >
+                                {selectedMsg.read ? "Okundu Olarak İşaretli" : "Okunmadı Olarak İşaretli"}
+                              </button>
+                            </div>
+
+                            {/* Message Body Container */}
+                            <div className="bg-[#090a12] p-4.5 rounded-2xl border border-white/5 min-h-[140px] relative">
+                              <span className="absolute top-3.5 right-3.5 text-[8px] font-mono text-gray-600 font-black uppercase">// MESAJ İÇERİĞİ</span>
+                              <p className="text-xs sm:text-sm text-gray-200 leading-relaxed font-medium whitespace-pre-wrap pt-3">
+                                {selectedMsg.message}
+                              </p>
+                            </div>
+
+                            {/* Actions Footer */}
+                            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-2">
+                              <div className="flex gap-2">
+                                <a
+                                  href={`mailto:${selectedMsg.email}?subject=Re: weew Portal İletişim`}
+                                  className="flex-1 sm:flex-none h-9 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer"
+                                >
+                                  <Mail className="h-3.5 w-3.5" />
+                                  Cevapla (Reply)
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(selectedMsg.message);
+                                    showToast("Mesaj metni panoya kopyalandı!", "success");
+                                  }}
+                                  className="h-9 px-3.5 rounded-xl border border-white/5 bg-[#090a12] hover:bg-white/5 text-gray-400 hover:text-white font-black text-xs uppercase tracking-wider transition cursor-pointer inline-flex items-center justify-center"
+                                  title="Panoya Kopyala"
+                                >
+                                  <Copy className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteMessage(selectedMsg.id)}
+                                className="h-9 px-4 rounded-xl bg-red-600/10 hover:bg-red-600 border border-red-500/20 text-red-400 hover:text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Mesajı Kalıcı Olarak Sil
+                              </button>
+                            </div>
+
+                          </div>
+                        );
+                      })()}
+                    </div>
+
                   </div>
                 )}
               </div>
@@ -2537,17 +3038,22 @@ export default function AdminPanelModal({
 
             {/* Tab: Users list */}
             {activeSubTab === "users" && (
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {/* Registration Control Switcher card */}
-                <div className="p-5 rounded-3xl bg-white/5 border border-white/5 space-y-3">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <div>
-                      <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                        <span>🛡️ Kayıt Olma Özelliğini Kapat/Aç</span>
-                      </h4>
-                      <p className="text-[11px] text-gray-400 font-medium leading-normal mt-0.5">
-                        Ziyaretçilerin yeni üyelik oluşturmasını devre dışı bırakabilir veya aktifleştirebilirsiniz.
-                      </p>
+                <div className="p-5 rounded-3xl bg-white/5 border border-white/5 space-y-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-purple-600/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                        <Shield className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-white uppercase tracking-wider">
+                          KAYIT OLMA ÖZELLİĞİ KONTROLÜ
+                        </h4>
+                        <p className="text-[11px] text-gray-400 font-medium leading-normal mt-0.5">
+                          Portal dışı ziyaretçilerin sisteme yeni üyelik oluşturmasını anlık olarak kapatıp açabilirsiniz.
+                        </p>
+                      </div>
                     </div>
                     <button
                       type="button"
@@ -2568,78 +3074,208 @@ export default function AdminPanelModal({
                           : "bg-red-600 hover:bg-red-500 text-white shadow-[0_0_12px_rgba(220,38,38,0.3)]"
                       }`}
                     >
-                      {isRegistrationDisabled ? "KAYITLARI AÇ (ENABLE)" : "KAYITLARI KAPAT (DISABLE)"}
+                      {isRegistrationDisabled ? "KAYITLARI AKTİFLEŞTİR" : "KAYITLARI DEVRE DIŞI BIRAK"}
                     </button>
                   </div>
-                  <div className="text-[10px] font-mono font-black uppercase tracking-widest flex items-center gap-1.5 pt-1 border-t border-white/5">
-                    <span>Mevcut Durum:</span>
+                  
+                  <div className="text-[10px] font-mono font-black uppercase tracking-widest flex items-center gap-1.5 pt-3 border-t border-white/5">
+                    <span>Kayıt Durumu:</span>
                     {isRegistrationDisabled ? (
                       <span className="text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded animate-pulse">
-                        🔴 Yeni Kayıtlar Devre Dışı (Closed)
+                        🔴 Yeni Üye Kayıtları Kilitlendi (Closed)
                       </span>
                     ) : (
                       <span className="text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
-                        🟢 Kayıtlar Herkese Açık (Open)
+                        🟢 Kayıtlar Aktif ve Herkese Açık (Open)
                       </span>
                     )}
                   </div>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-purple-500/5 border border-purple-500/10 text-[11px] text-purple-300 leading-normal font-medium uppercase tracking-wide">
-                  ⚠️ <span className="font-extrabold">Kurucu Hakları Korumalıdır:</span> iremsaltanat002001@gmail.com e-posta adresine ait kurucu adminlik statüsü sistem tarafından kilitlenmiştir ve hiçbir koşulda kaldırılamaz.
+                {/* Primary Stats Panel */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-left">
+                  <div className="p-4 rounded-2xl bg-[#11121d] border border-white/5">
+                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-1">TOPLAM ÜYE</span>
+                    <span className="text-lg font-black text-white">{registeredUsers.length}</span>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-[#11121d] border border-white/5">
+                    <span className="text-[9px] font-bold text-purple-400 uppercase tracking-wider block mb-1">YÖNETİCİ (ADMIN)</span>
+                    <span className="text-lg font-black text-purple-400">{registeredUsers.filter(u => u.role === "admin").length}</span>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-[#11121d] border border-white/5">
+                    <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block mb-1">İZLEYİCİ / ÜYE</span>
+                    <span className="text-lg font-black text-gray-300">{registeredUsers.filter(u => u.role === "user").length}</span>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-[#11121d] border border-white/5">
+                    <span className="text-[9px] font-bold text-amber-400 uppercase tracking-wider block mb-1">KURUCU</span>
+                    <span className="text-lg font-black text-amber-400">1</span>
+                  </div>
                 </div>
 
-                <div className="rounded-3xl border border-white/5 overflow-hidden bg-black/20">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="bg-white/5 border-b border-white/5 text-[10px] font-bold uppercase text-gray-400 tracking-wider">
-                        <th className="p-4">Kullanıcı Adı</th>
-                        <th className="p-4">E-posta</th>
-                        <th className="p-4">Rol / Yetki</th>
-                        <th className="p-4 text-right">Eylemler</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5 font-semibold">
-                      {registeredUsers.map((u) => {
-                        const isPrimaryAdmin = u.email === "iremsaltanat002001@gmail.com";
-                        return (
-                          <tr key={u.email} className="hover:bg-white/5 transition">
-                            <td className="p-4 text-white uppercase">{u.name}</td>
-                            <td className="p-4 text-purple-400 font-mono text-[11px]">{u.email}</td>
-                            <td className="p-4">
-                              {isPrimaryAdmin ? (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-500/20 shadow-[0_0_8px_rgba(245,158,11,0.2)]">
-                                  <Award className="h-3 w-3" />
-                                  <span>KURUCU ADMIN</span>
-                                </span>
-                              ) : u.role === "admin" ? (
-                                <span className="rounded-full bg-purple-500/10 px-2.5 py-0.5 text-[10px] font-bold text-purple-400 border border-purple-500/20">
-                                  ADMIN
-                                </span>
-                              ) : (
-                                <span className="rounded-full bg-white/5 px-2.5 py-0.5 text-[10px] font-bold text-gray-400">
-                                  ÜYE / İZLEYİCİ
-                                </span>
-                              )}
-                            </td>
-                            <td className="p-4 text-right">
-                              {isPrimaryAdmin ? (
-                                <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest italic">Kilitli</span>
-                              ) : (
-                                <button
-                                  onClick={() => handleDeleteUser(u.email)}
-                                  className="h-7 w-7 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white inline-flex items-center justify-center transition border border-red-500/20"
-                                  title="Üyeliği Kaldır"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                {/* Protected Founder Warning banner */}
+                <div className="p-3.5 rounded-2xl bg-purple-500/5 border border-purple-500/10 text-[11px] text-purple-300 leading-normal font-semibold uppercase tracking-wide flex items-center gap-2 text-left">
+                  <AlertCircle className="h-4 w-4 text-purple-400 shrink-0" />
+                  <span>
+                    <strong className="font-extrabold text-white">Kurucu Hakları Korunuyor:</strong> <code className="text-purple-300 font-bold bg-white/5 px-1 py-0.5 rounded text-[10px]">iremsaltanat002001@gmail.com</code> kurucu statüsü sistem tarafından kilitlenmiştir.
+                  </span>
+                </div>
+
+                {/* Filters and Search Toolbar */}
+                <div className="flex flex-col sm:flex-row gap-3 bg-[#11121d] p-3 rounded-2xl border border-white/5">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
+                    <input
+                      type="text"
+                      value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
+                      placeholder="Üye adı veya e-posta ile ara..."
+                      className="w-full h-10 pl-9 pr-4 rounded-xl bg-[#090a12] border border-white/5 text-xs text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none transition font-medium"
+                    />
+                  </div>
+                  
+                  <div className="flex gap-1.5 shrink-0">
+                    {(["all", "admin", "user"] as const).map((role) => (
+                      <button
+                        key={role}
+                        onClick={() => setUserRoleFilter(role)}
+                        className={`px-4 h-10 rounded-xl text-[10px] font-black uppercase tracking-wider transition border cursor-pointer inline-flex items-center ${
+                          userRoleFilter === role
+                            ? "bg-purple-600 border-purple-500 text-white"
+                            : "bg-[#090a12] border-white/5 text-gray-500 hover:text-white"
+                        }`}
+                      >
+                        {role === "all" ? "Tüm Üyeler" : role === "admin" ? "Sadece Adminler" : "Sadece İzleyiciler"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Members Table */}
+                <div className="rounded-2xl border border-white/5 overflow-hidden bg-black/20 text-left">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs min-w-[600px]">
+                      <thead>
+                        <tr className="bg-white/5 border-b border-white/5 text-[10px] font-bold uppercase text-gray-400 tracking-wider">
+                          <th className="p-4">Kullanıcı Bilgisi</th>
+                          <th className="p-4">Katılım Tarihi</th>
+                          <th className="p-4">Rol / Yetki</th>
+                          <th className="p-4 text-center">Yetki Yönetimi</th>
+                          <th className="p-4 text-right">Eylemler</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5 font-semibold">
+                        {(() => {
+                          const filtered = registeredUsers.filter(u => {
+                            const matchesSearch = 
+                              u.name.toLowerCase().includes(userSearch.toLowerCase()) || 
+                              u.email.toLowerCase().includes(userSearch.toLowerCase());
+                            if (userRoleFilter === "admin") return matchesSearch && u.role === "admin";
+                            if (userRoleFilter === "user") return matchesSearch && u.role === "user";
+                            return matchesSearch;
+                          });
+
+                          if (filtered.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan={5} className="p-8 text-center text-gray-500">
+                                  <Users className="h-8 w-8 text-gray-600 mx-auto mb-2 animate-pulse" />
+                                  <span className="text-[10px] font-bold uppercase tracking-wider block">Kullanıcı bulunamadı</span>
+                                  <p className="text-[9px] text-gray-600 mt-0.5">Farklı bir arama kelimesi veya filtre seçmeyi deneyin.</p>
+                                </td>
+                              </tr>
+                            );
+                          }
+
+                          return filtered.map((u) => {
+                            const isPrimaryAdmin = u.email === "iremsaltanat002001@gmail.com";
+                            const firstLetter = u.name.charAt(0).toUpperCase();
+                            
+                            return (
+                              <tr key={u.email} className="hover:bg-white/5 transition">
+                                <td className="p-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className="h-9 w-9 rounded-xl bg-purple-600/10 border border-purple-500/20 text-purple-400 font-black text-sm flex items-center justify-center shrink-0">
+                                      {firstLetter}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <span className="text-xs sm:text-sm font-bold text-white uppercase tracking-tight block truncate">
+                                        {u.name}
+                                      </span>
+                                      <span className="text-[10px] text-gray-500 font-mono block">
+                                        {u.email}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="p-4 text-gray-400 font-mono text-[10px]">
+                                  {u.createdAt ? new Date(u.createdAt).toLocaleDateString("tr-TR", { year: "numeric", month: "long", day: "numeric" }) : "-"}
+                                </td>
+                                <td className="p-4">
+                                  {isPrimaryAdmin ? (
+                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.25)]">
+                                      <Award className="h-3.5 w-3.5" />
+                                      <span>KURUCU ADMIN</span>
+                                    </span>
+                                  ) : u.role === "admin" ? (
+                                    <span className="rounded-full bg-purple-500/10 px-2.5 py-0.5 text-[10px] font-bold text-purple-400 border border-purple-500/20">
+                                      ADMIN
+                                    </span>
+                                  ) : (
+                                    <span className="rounded-full bg-white/5 px-2.5 py-0.5 text-[10px] font-bold text-gray-400 border border-white/5">
+                                      ÜYE / İZLEYİCİ
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="p-4 text-center">
+                                  {isPrimaryAdmin ? (
+                                    <span className="text-[10px] font-mono text-amber-500 uppercase tracking-widest italic font-bold">TAM YETKİ</span>
+                                  ) : (
+                                    <div className="inline-flex rounded-xl bg-[#090a12] p-1 border border-white/5">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateUserRole(u.email, "user")}
+                                        className={`px-3 py-1 text-[9px] font-black uppercase rounded-lg transition cursor-pointer ${
+                                          u.role === "user"
+                                            ? "bg-white/5 text-gray-300"
+                                            : "text-gray-500 hover:text-white"
+                                        }`}
+                                      >
+                                        Üye Yap
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateUserRole(u.email, "admin")}
+                                        className={`px-3 py-1 text-[9px] font-black uppercase rounded-lg transition cursor-pointer ${
+                                          u.role === "admin"
+                                            ? "bg-purple-600 text-white shadow-md shadow-purple-600/10"
+                                            : "text-gray-500 hover:text-purple-400"
+                                        }`}
+                                      >
+                                        Yönetici Yap
+                                      </button>
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="p-4 text-right">
+                                  {isPrimaryAdmin ? (
+                                    <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest italic">Korumalı</span>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleDeleteUser(u.email)}
+                                      className="h-8 w-8 rounded-xl bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white inline-flex items-center justify-center transition border border-red-500/20 cursor-pointer"
+                                      title="Üyeliği Kaldır"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
@@ -3912,6 +4548,310 @@ export default function AdminPanelModal({
                     )}
                   </div>
                 )}
+              </div>
+            )}
+
+
+            {/* Tab: Giveaway Management */}
+            {activeSubTab === "giveaways" && (
+              <div className="space-y-6">
+                
+                {/* Upper action row */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#11121d] p-4 rounded-2xl border border-white/5">
+                  <div>
+                    <span className="text-[10px] font-mono text-purple-400 font-extrabold uppercase tracking-widest block mb-0.5">SİSTEM KONTROLÜ</span>
+                    <h3 className="text-xs text-gray-400 font-semibold">
+                      İnteraktif çekilişleri gerçek zamanlı başlatabilir, katılımcıları denetleyebilir ve kazanan belirleyebilirsiniz.
+                    </h3>
+                  </div>
+                  <button
+                    onClick={handleResetGiveawaysToDefault}
+                    className="shrink-0 flex items-center gap-1.5 rounded-xl border border-white/5 bg-[#0e0f1a] hover:bg-white/5 text-gray-400 hover:text-white px-3 py-2 text-[10px] font-black uppercase tracking-wider transition cursor-pointer"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Tümünü Sıfırla
+                  </button>
+                </div>
+
+                {/* Main dual column layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                  
+                  {/* Left Column: Create Form */}
+                  <div className="lg:col-span-5 bg-[#11121d] rounded-2xl border border-white/5 p-5 space-y-4">
+                    <div className="flex items-center gap-2 text-purple-400 pb-3 border-b border-white/5">
+                      <Plus className="h-4 w-4" />
+                      <h4 className="font-display text-xs font-black uppercase tracking-wider">
+                        Yeni Çekiliş Başlat
+                      </h4>
+                    </div>
+
+                    <form onSubmit={handleCreateGiveaway} className="space-y-4">
+                      {/* Prize */}
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                          Verilecek Ödül (Örn: AK-47 | Redline) *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={newGiveawayPrize}
+                          onChange={(e) => setNewGiveawayPrize(e.target.value)}
+                          placeholder="Ödül adını giriniz..."
+                          className="w-full h-10 rounded-xl border border-white/5 bg-[#0e0f1a] px-4 text-xs text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none transition font-medium"
+                        />
+                      </div>
+
+                      {/* TR Desc */}
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                          Türkçe Açıklama (Opsiyonel)
+                        </label>
+                        <textarea
+                          value={newGiveawayDescTR}
+                          onChange={(e) => setNewGiveawayDescTR(e.target.value)}
+                          placeholder="Çekiliş detaylarını giriniz..."
+                          rows={2}
+                          className="w-full rounded-xl border border-white/5 bg-[#0e0f1a] px-4 py-2.5 text-xs text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none transition resize-none font-medium"
+                        />
+                      </div>
+
+                      {/* EN Desc */}
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                          İngilizce Açıklama (Opsiyonel)
+                        </label>
+                        <textarea
+                          value={newGiveawayDescEN}
+                          onChange={(e) => setNewGiveawayDescEN(e.target.value)}
+                          placeholder="Giveaway details in English..."
+                          rows={2}
+                          className="w-full rounded-xl border border-white/5 bg-[#0e0f1a] px-4 py-2.5 text-xs text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none transition resize-none font-medium"
+                        />
+                      </div>
+
+                      {/* Duration */}
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                          Çekiliş Süresi (Dakika)
+                        </label>
+                        <select
+                          value={newGiveawayDuration}
+                          onChange={(e) => setNewGiveawayDuration(e.target.value)}
+                          className="w-full h-10 rounded-xl border border-white/5 bg-[#0e0f1a] px-4 text-xs text-white focus:border-purple-500 focus:outline-none transition font-bold"
+                        >
+                          <option value="5">5 Dakika</option>
+                          <option value="10">10 Dakika</option>
+                          <option value="30">30 Dakika</option>
+                          <option value="60">1 Saat</option>
+                          <option value="120">2 Saat</option>
+                          <option value="1440">24 Saat</option>
+                        </select>
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full h-10 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs uppercase tracking-wider transition flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-purple-600/15 mt-2"
+                      >
+                        <Gift className="h-4 w-4" />
+                        Çekilişi Yayına Al
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Right Column: Status & History */}
+                  <div className="lg:col-span-7 space-y-6">
+                    
+                    {/* Active Giveaway Card */}
+                    <div className="bg-[#11121d] rounded-2xl border border-white/5 p-5 space-y-4">
+                      <div className="flex items-center justify-between pb-3 border-b border-white/5">
+                        <div className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <h4 className="font-display text-xs font-black uppercase tracking-wider text-white">
+                            Aktif Çekiliş Durumu
+                          </h4>
+                        </div>
+                        {giveaways.find(g => g.status === "active") && (
+                          <span className="text-[9px] font-mono font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded">
+                            AKTİF YAYINDA
+                          </span>
+                        )}
+                      </div>
+
+                      {(() => {
+                        const active = giveaways.find(g => g.status === "active");
+                        if (!active) {
+                          return (
+                            <div className="py-8 text-center bg-white/5 rounded-xl border border-dashed border-white/5">
+                              <Gift className="h-8 w-8 text-gray-600 mx-auto mb-2 animate-pulse" />
+                              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">YAYINDA AKTİF ÇEKİLİŞ YOK</span>
+                              <p className="text-[9px] text-gray-600 font-medium mt-0.5">Soldaki paneli kullanarak yeni bir tane başlatabilirsiniz.</p>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="space-y-4">
+                            {/* Prize info */}
+                            <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/10">
+                              <span className="text-[8px] font-mono text-purple-400 font-black block uppercase tracking-wider mb-1">ÖDÜL</span>
+                              <div className="text-sm font-black text-white flex items-center gap-2">
+                                <Trophy className="h-4 w-4 text-amber-400 shrink-0" />
+                                {active.prize}
+                              </div>
+                              <p className="text-[10px] text-gray-400 font-semibold mt-1">
+                                {active.descriptionTR}
+                              </p>
+                              <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-white/5 text-[10px] text-gray-400 font-mono font-bold">
+                                <span>Katılımcı: <strong className="text-white">{active.entrants.length}</strong></span>
+                                <span>Bitiş: <strong className="text-white">{new Date(active.endTime).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}</strong></span>
+                              </div>
+                            </div>
+
+                            {/* Entrants moderation */}
+                            <div className="space-y-2">
+                              <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                Katılımcı Listesi & Kontrolü ({active.entrants.length})
+                              </span>
+
+                              {/* Manual Add Entrant Input */}
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={newEntrantName}
+                                  onChange={(e) => setNewEntrantName(e.target.value)}
+                                  placeholder="Katılımcı kullanıcı adı..."
+                                  className="flex-1 h-9 rounded-xl border border-white/5 bg-[#0e0f1a] px-3 text-xs text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none transition font-medium"
+                                  onKeyDown={(e) => e.key === "Enter" && handleAddManualEntrant(active.id)}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddManualEntrant(active.id)}
+                                  className="h-9 px-4 rounded-xl bg-purple-600/10 hover:bg-purple-600 text-purple-400 hover:text-white border border-purple-500/20 font-black text-[10px] uppercase transition cursor-pointer shrink-0"
+                                >
+                                  Manuel Ekle
+                                </button>
+                              </div>
+
+                              {/* Simulator helper */}
+                              <div className="flex justify-between items-center bg-[#0e0f1a]/80 p-2.5 rounded-xl border border-white/5">
+                                <span className="text-[9px] text-gray-500 font-mono font-bold">Sanal katılım simülatörü</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddMockEntrants(active.id)}
+                                  className="flex items-center gap-1 bg-[#00e676]/10 hover:bg-[#00e676] text-[#00e676] hover:text-black border border-[#00e676]/20 font-mono text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider transition cursor-pointer"
+                                >
+                                  <Users className="h-3 w-3" />
+                                  +5 İzleyici Gönder
+                                </button>
+                              </div>
+
+                              {/* Scrollable list of entrants */}
+                              {active.entrants.length === 0 ? (
+                                <p className="text-[10px] text-gray-600 italic font-mono py-1">Henüz katılan yok.</p>
+                              ) : (
+                                <div className="max-h-28 overflow-y-auto bg-[#0e0f1a]/50 rounded-xl p-2.5 border border-white/5 custom-scrollbar flex flex-wrap gap-1.5">
+                                  {active.entrants.map((ent, idx) => (
+                                    <div
+                                      key={`${ent}-${idx}`}
+                                      className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg bg-white/5 border border-white/5 text-[10px] text-gray-300 font-bold hover:border-red-500/30 transition group"
+                                    >
+                                      <span>{ent}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleKickEntrant(active.id, ent)}
+                                        className="text-gray-500 hover:text-red-400 transition"
+                                        title="Çıkar"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* DRAW & CANCEL CTAs */}
+                            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/5">
+                              <button
+                                type="button"
+                                onClick={() => handleCancelGiveaway(active.id)}
+                                className="h-10 rounded-xl bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/20 font-black text-xs uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5"
+                              >
+                                <X className="h-4 w-4" />
+                                İptal Et
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleAdminDrawGiveaway(active.id)}
+                                className="h-10 rounded-xl bg-[#a855f7] hover:bg-[#9333ea] text-white font-black text-xs uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-purple-600/15"
+                              >
+                                <Trophy className="h-4 w-4" />
+                                Kazananı Çek!
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Past Giveaways History List */}
+                    <div className="bg-[#11121d] rounded-2xl border border-white/5 p-5 space-y-4">
+                      <div className="flex items-center gap-2 pb-3 border-b border-white/5">
+                        <Trophy className="h-4 w-4 text-purple-400" />
+                        <h4 className="font-display text-xs font-black uppercase tracking-wider text-white">
+                          Çekiliş Geçmişi ({giveaways.filter(g => g.status !== "active").length})
+                        </h4>
+                      </div>
+
+                      {giveaways.filter(g => g.status !== "active").length === 0 ? (
+                        <p className="text-[10px] text-gray-500 italic py-2">Henüz tamamlanmış veya iptal edilmiş bir çekiliş kaydı yok.</p>
+                      ) : (
+                        <div className="space-y-2.5 max-h-64 overflow-y-auto custom-scrollbar pr-1">
+                          {giveaways
+                            .filter(g => g.status !== "active")
+                            .map((g) => (
+                              <div
+                                key={g.id}
+                                className="flex justify-between items-center p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-[#0e0f1a] transition gap-4"
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                                    <span className="text-[9px] font-mono text-gray-500">
+                                      {new Date(g.createdAt).toLocaleDateString("tr-TR")}
+                                    </span>
+                                    {g.status === "cancelled" ? (
+                                      <span className="text-[8px] font-mono font-black text-red-400 bg-red-500/10 px-1 rounded uppercase tracking-wider">İptal Edildi</span>
+                                    ) : (
+                                      <span className="text-[8px] font-mono font-black text-[#00e676] bg-[#00e676]/10 px-1 rounded uppercase tracking-wider">Tamamlandı</span>
+                                    )}
+                                  </div>
+                                  <h5 className="text-[11px] font-black text-white uppercase truncate tracking-wider">{g.prize}</h5>
+                                  {g.winner && (
+                                    <p className="text-[10px] text-purple-400 font-bold flex items-center gap-1 mt-0.5">
+                                      <Award className="h-3 w-3 text-amber-500" />
+                                      Kazanan: <span className="text-white underline">{g.winner}</span>
+                                    </p>
+                                  )}
+                                  <p className="text-[9px] text-gray-500 font-bold font-mono mt-0.5">Katılımcı Sayısı: {g.entrants.length}</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteGiveaway(g.id)}
+                                  className="h-8 w-8 rounded-xl bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white inline-flex items-center justify-center transition border border-red-500/20 cursor-pointer shrink-0"
+                                  title="Sil"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+
+                </div>
+
               </div>
             )}
 

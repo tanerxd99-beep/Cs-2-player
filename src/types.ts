@@ -114,6 +114,36 @@ export interface TranslationDict {
   footerSocial: string;
   footerOther: string;
   footerRights: string;
+
+  navGiveaway: string;
+  navCommunity: string;
+  giveawayTitle: string;
+  giveawaySub: string;
+  communityTitle: string;
+  communitySub: string;
+}
+
+export interface GiveawayItem {
+  id: string;
+  prize: string;
+  descriptionTR: string;
+  descriptionEN: string;
+  endTime: string; // ISO string
+  status: "active" | "completed" | "cancelled";
+  winner: string | null;
+  entrants: string[];
+  createdAt: string;
+}
+
+export interface CommunityPost {
+  id: string;
+  authorName: string;
+  authorAvatar: string;
+  badge: "user" | "sub" | "vip" | "mod" | "streamer" | "admin";
+  content: string;
+  timestamp: string;
+  likes: number;
+  isPinned?: boolean;
 }
 
 export interface CrosshairItem {

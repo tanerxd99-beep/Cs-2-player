@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Menu, X, Globe, ChevronDown, Tv, Home, Monitor, User, Mail, LogIn, LogOut, Shield, Settings2, Crosshair, Youtube, Bell, BellOff } from "lucide-react";
+import { Menu, X, Globe, ChevronDown, Tv, Home, Monitor, User, Mail, LogIn, LogOut, Shield, Settings2, Crosshair, Youtube, Bell, BellOff, Gift, Users } from "lucide-react";
 import { TranslationDict } from "../types";
 import { UserAccount } from "./AuthModal";
 
@@ -46,6 +46,7 @@ export default function Header({
 
   const menuItems = [
     { id: "home", label: translations.navHome, icon: Home },
+    { id: "giveaway", label: translations.navGiveaway || "Çekiliş", icon: Gift },
     { id: "settings", label: translations.navSettings, icon: Settings2 },
     { id: "crosshair", label: translations.navCrosshair || "Crosshair", icon: Crosshair },
     { id: "playlists", label: translations.playlistsSub || "Listeler", icon: Youtube },
@@ -95,13 +96,13 @@ export default function Header({
               referrerPolicy="no-referrer"
             />
           </div>
-          <span className="font-display text-sm sm:text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400 group-hover:brightness-110 uppercase">
+          <span className="font-display text-sm sm:text-lg lg:text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400 group-hover:brightness-110 uppercase shrink-0">
             {siteName}
           </span>
         </div>
 
         {/* Desktop Nav Items */}
-        <nav className="hidden md:flex items-center space-x-1">
+        <nav className="hidden md:flex items-center space-x-0.5 xl:space-x-1">
           {menuItems.map((item) => {
             const IconComponent = item.icon;
             const isActive = activeSection === item.id;
@@ -110,14 +111,14 @@ export default function Header({
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
                 id={`nav-btn-${item.id}`}
-                className={`relative flex items-center space-x-1.5 px-3 py-2 rounded-lg text-sm font-medium transition duration-200 ${
+                className={`relative flex items-center space-x-1 px-2 lg:px-2.5 xl:px-3 py-1.5 rounded-lg text-[11px] lg:text-xs xl:text-sm font-semibold transition duration-200 shrink-0 ${
                   isActive 
-                    ? "text-purple-400" 
+                    ? "text-purple-400 font-extrabold" 
                     : "text-gray-400 hover:text-white hover:bg-white/5"
                 }`}
               >
-                <IconComponent className="h-4 w-4" />
-                <span>{item.label}</span>
+                <IconComponent className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden lg:inline">{item.label}</span>
                 {isActive && (
                   <motion.div 
                     layoutId="activeNavIndicator"
