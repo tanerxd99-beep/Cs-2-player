@@ -6,13 +6,15 @@ import {
   Upload, Smartphone, Sliders, Play, Info, Plus, Target, ExternalLink,
   LayoutDashboard, Radio, Eye, Activity, Youtube, Megaphone, Cpu, Layers, Bell,
   Sparkles, Download, Gift, Trophy, Search, Filter, CheckCheck, Copy, MailOpen,
-  Menu, LogOut
+  Menu, LogOut, Link
 } from "lucide-react";
 import { UserProfile } from "./EditProfileModal";
 import { UserAccount } from "./AuthModal";
 import { CS2SettingsData } from "./CS2SettingsSection";
 import { CrosshairItem, PlaylistItem, SpecItem, Announcement, GiveawayItem } from "../types";
 import { DEFAULT_GIVEAWAYS } from "../data";
+import { triggerWebhook } from "../utils/webhookHelper";
+import { WebhookIntegrationsPanel } from "./WebhookIntegrationsPanel";
 
 const ANNOUNCEMENT_TEMPLATES = [
   {
@@ -195,7 +197,7 @@ export default function AdminPanelModal({
   notificationsEnabled = false,
   onToggleNotifications
 }: AdminPanelModalProps) {
-  const [activeSubTab, setActiveSubTab] = useState<"dashboard" | "profile" | "settings" | "inbox" | "users" | "stream" | "crosshairs" | "playlists" | "specs" | "announcements" | "giveaways">("dashboard");
+  const [activeSubTab, setActiveSubTab] = useState<"dashboard" | "profile" | "settings" | "inbox" | "users" | "stream" | "crosshairs" | "playlists" | "specs" | "announcements" | "giveaways" | "integrations">("dashboard");
   const [formData, setFormData] = useState<UserProfile>({ ...profile });
   const [settingsForm, setSettingsForm] = useState<CS2SettingsData>({ ...cs2Settings });
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -1245,6 +1247,7 @@ export default function AdminPanelModal({
             { type: "header" as const, label: "Etkinlikler & Ayarlar" },
             { id: "stream", label: "Canlı Yayın & Simülasyon", subTab: "stream" as const, icon: Radio },
             { id: "giveaways", label: "İnteraktif Çekiliş Yönetimi", subTab: "giveaways" as const, icon: Gift },
+            { id: "integrations", label: "Discord & Webhook", subTab: "integrations" as const, icon: Link },
             { id: "settings", label: "Sistem & Site Ayarları", subTab: "settings" as const, icon: Settings2 }
           ].map((item, idx) => {
             if ("type" in item && item.type === "header") {
@@ -1461,6 +1464,7 @@ export default function AdminPanelModal({
                 {activeSubTab === "dashboard" && "Genel Bakış"}
                 {activeSubTab === "profile" && "Site Profilini Düzenle"}
                 {activeSubTab === "settings" && "Sistem & CS2 Oyun Ayarları"}
+                {activeSubTab === "integrations" && "Discord & Webhook Entegrasyon Merkezi"}
                 {activeSubTab === "inbox" && `Gelen Mesaj Kutusu (${messages.length})`}
                 {activeSubTab === "users" && `Kayıtlı Üye Listesi (${registeredUsers.length})`}
                 {activeSubTab === "stream" && "Canlı Yayın & Simülasyon Kontrolü"}
@@ -1713,6 +1717,12 @@ export default function AdminPanelModal({
                           onClick={() => {
                             const nextLive = !isStreamLive;
                             setIsStreamLive(nextLive);
+                            if (nextLive) {
+                              triggerWebhook("stream_live", {
+                                streamTitle: streamTitle || "Counter-Strike 2 Rekabetçi Maçlar & Topluluk Çekilişi",
+                                streamUrl: "https://kick.com/weew"
+                              });
+                            }
                             showToast(
                               nextLive 
                                 ? "Yayın başarıyla başlatıldı! Şu an CANLI (LIVE) yayındasınız." 
@@ -2941,6 +2951,11 @@ export default function AdminPanelModal({
               </form>
             )}
 
+            {/* Tab: Integrations & Webhooks */}
+            {activeSubTab === "integrations" && (
+              <WebhookIntegrationsPanel showToast={showToast} />
+            )}
+
             {/* Tab: Message Inbox */}
             {activeSubTab === "inbox" && (
               <div className="space-y-5">
@@ -3461,7 +3476,22 @@ export default function AdminPanelModal({
 
                   <button
                     type="button"
-                    onClick={() => setIsStreamLive(!isStreamLive)}
+                    onClick={() => {
+                      const nextLive = !isStreamLive;
+                      setIsStreamLive(nextLive);
+                      if (nextLive) {
+                        triggerWebhook("stream_live", {
+                          streamTitle: streamTitle || "Counter-Strike 2 Rekabetçi Maçlar & Topluluk Çekilişi",
+                          streamUrl: "https://kick.com/weew"
+                        });
+                      }
+                      showToast(
+                        nextLive 
+                          ? "Yayın başarıyla başlatıldı! Şu an CANLI (LIVE) yayındasınız." 
+                          : "Yayın durduruldu. Çevrimdışı (OFFLINE) moda geçildi.",
+                        nextLive ? "success" : "info"
+                      );
+                    }}
                     className={`rounded-2xl px-6 py-3 text-xs font-black uppercase tracking-widest transition duration-300 cursor-pointer ${
                       isStreamLive 
                         ? "bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]" 

@@ -1,8 +1,24 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Gift, Users, Trophy, Sparkles, Plus, Trash2, Play, AlertCircle, RefreshCw, Star, CheckCircle2 } from "lucide-react";
+import { Gift, Users, Trophy, Sparkles, Plus, Trash2, Play, AlertCircle, RefreshCw, Star, CheckCircle2, User, HelpCircle } from "lucide-react";
 import { TranslationDict, GiveawayItem } from "../types";
 import { DEFAULT_GIVEAWAYS } from "../data";
+import { triggerWebhook } from "../utils/webhookHelper";
+
+export const AVATAR_PRESETS = [
+  { url: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?q=80&w=150&auto=format&fit=crop", label: "Sniper Pro" },
+  { url: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150&auto=format&fit=crop", label: "Agency Agent" },
+  { url: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=150&auto=format&fit=crop", label: "CS2 General" },
+  { url: "https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=150&auto=format&fit=crop", label: "Entry Fragger" },
+  { url: "https://images.unsplash.com/photo-1628157582853-a796fa650a6a?q=80&w=150&auto=format&fit=crop", label: "Neon Phantom" },
+  { url: "https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=150&auto=format&fit=crop", label: "Valkyrie CS" },
+  { url: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=150&auto=format&fit=crop", label: "Stealth Rogue" },
+  { url: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=150&auto=format&fit=crop", label: "Shadow Assassin" },
+  { url: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop", label: "Tactical Leader" },
+  { url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop", label: "Beast Mode" },
+  { url: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=150&auto=format&fit=crop", label: "Cyber Strike" },
+  { url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop", label: "Speed Demon" },
+];
 
 interface GiveawaySectionProps {
   translations: TranslationDict;
@@ -26,6 +42,7 @@ export default function GiveawaySection({ translations, lang, currentUser }: Giv
   const [activeGiveaway, setActiveGiveaway] = useState<GiveawayItem | null>(null);
   const [completedGiveaways, setCompletedGiveaways] = useState<GiveawayItem[]>([]);
   const [nickname, setNickname] = useState("");
+  const [selectedPresetAvatar, setSelectedPresetAvatar] = useState(AVATAR_PRESETS[0].url);
   const [hasJoined, setHasJoined] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   
@@ -41,6 +58,22 @@ export default function GiveawaySection({ translations, lang, currentUser }: Giv
   const [winnerName, setWinnerName] = useState<string | null>(null);
   const [spinList, setSpinList] = useState<string[]>([]);
   const [showConfetti, setShowConfetti] = useState(false);
+
+  // Avatar lookup map loaded from localStorage
+  const [entrantAvatars, setEntrantAvatars] = useState<Record<string, string>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("weew_entrant_avatars") || "{}");
+    } catch (e) {
+      return {};
+    }
+  });
+
+  // Keep state and localStorage in sync
+  const saveEntrantAvatar = (name: string, url: string) => {
+    const updated = { ...entrantAvatars, [name]: url };
+    setEntrantAvatars(updated);
+    localStorage.setItem("weew_entrant_avatars", JSON.stringify(updated));
+  };
 
   // Split active and completed
   useEffect(() => {
@@ -80,6 +113,42 @@ export default function GiveawaySection({ translations, lang, currentUser }: Giv
     };
   }, []);
 
+  // Ensure all entrants (active, past, bots) have mapped avatars
+  useEffect(() => {
+    let changed = false;
+    const current = { ...entrantAvatars };
+
+    if (activeGiveaway) {
+      activeGiveaway.entrants.forEach((ent) => {
+        if (!current[ent]) {
+          const hash = ent.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+          current[ent] = AVATAR_PRESETS[hash % AVATAR_PRESETS.length].url;
+          changed = true;
+        }
+      });
+    }
+
+    completedGiveaways.forEach((g) => {
+      g.entrants.forEach((ent) => {
+        if (!current[ent]) {
+          const hash = ent.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+          current[ent] = AVATAR_PRESETS[hash % AVATAR_PRESETS.length].url;
+          changed = true;
+        }
+      });
+      if (g.winner && !current[g.winner]) {
+        const hash = g.winner.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        current[g.winner] = AVATAR_PRESETS[hash % AVATAR_PRESETS.length].url;
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      setEntrantAvatars(current);
+      localStorage.setItem("weew_entrant_avatars", JSON.stringify(current));
+    }
+  }, [activeGiveaway, completedGiveaways]);
+
   // Real-time join simulator
   // Every 8-12 seconds, add a mock CS2 player to make the giveaway feel extremely active
   useEffect(() => {
@@ -98,6 +167,15 @@ export default function GiveawaySection({ translations, lang, currentUser }: Giv
       if (availableBots.length === 0) return;
 
       const randomBot = availableBots[Math.floor(Math.random() * availableBots.length)];
+
+      // Assign a random avatar preset to the bot
+      const currentAvatars = JSON.parse(localStorage.getItem("weew_entrant_avatars") || "{}");
+      const randomAvatar = AVATAR_PRESETS[Math.floor(Math.random() * AVATAR_PRESETS.length)].url;
+      currentAvatars[randomBot] = randomAvatar;
+      localStorage.setItem("weew_entrant_avatars", JSON.stringify(currentAvatars));
+      
+      // Dispatch update to sync layout
+      setEntrantAvatars(currentAvatars);
 
       setGiveaways(prev => prev.map(g => {
         if (g.id === activeGiveaway.id) {
@@ -134,6 +212,9 @@ export default function GiveawaySection({ translations, lang, currentUser }: Giv
       setErrorMessage(lang === "TR" ? "Bu çekilişe zaten katıldınız!" : "You have already joined this raffle!");
       return;
     }
+
+    // Save user's selected preset avatar
+    saveEntrantAvatar(joinerName, selectedPresetAvatar);
 
     // Add entrant
     const updated = giveaways.map(g => {
@@ -225,6 +306,13 @@ export default function GiveawaySection({ translations, lang, currentUser }: Giv
               return g;
             });
             saveAndSetGiveaways(updated);
+            
+            // Trigger Webhook for winner
+            triggerWebhook("giveaway_winner", {
+              prize: activeGiveaway.prize,
+              winner: winner || "Bilinmiyor",
+              entrantsCount: activeGiveaway.entrants.length
+            });
           }
         }, 800);
         return;
@@ -322,6 +410,13 @@ export default function GiveawaySection({ translations, lang, currentUser }: Giv
     };
 
     saveAndSetGiveaways([newGiveaway, ...cleanList]);
+    
+    // Trigger Webhook
+    triggerWebhook("giveaway_start", {
+      prize: newGiveaway.prize,
+      description: lang === "TR" ? newGiveaway.descriptionTR : newGiveaway.descriptionEN
+    });
+
     setCustomPrize("");
     setCustomDescTR("");
     setCustomDescEN("");
@@ -523,25 +618,69 @@ export default function GiveawaySection({ translations, lang, currentUser }: Giv
                     </div>
                   </div>
                 ) : (
-                  <form onSubmit={handleJoinGiveaway} className="flex flex-col sm:flex-row gap-3">
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={nickname}
-                        onChange={e => setNickname(e.target.value)}
-                        required
-                        disabled={!!currentUser}
-                        placeholder={currentUser ? currentUser.name : (lang === "TR" ? "Sohbet Takma Adınızı Girin" : "Enter Chat Nickname")}
-                        className="w-full h-11 rounded-xl bg-[#12131a] border border-white/5 px-4 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
-                      />
+                  <form onSubmit={handleJoinGiveaway} className="space-y-4">
+                    {/* Character Avatar Picker */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <User className="h-3.5 w-3.5 text-purple-400" />
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                          {lang === "TR" ? "Yayın Odası Karakter Avatarını Seç" : "Select Your Room Character Avatar"}
+                        </span>
+                      </div>
+                      <div className="flex gap-2.5 overflow-x-auto pb-2 pt-1 custom-scrollbar scroll-smooth">
+                        {AVATAR_PRESETS.map((preset) => {
+                          const isSelected = selectedPresetAvatar === preset.url;
+                          return (
+                            <button
+                              key={preset.url}
+                              type="button"
+                              onClick={() => setSelectedPresetAvatar(preset.url)}
+                              className={`relative group shrink-0 h-14 w-14 rounded-xl border-2 transition duration-200 overflow-hidden cursor-pointer ${
+                                isSelected
+                                  ? "border-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.4)] scale-105"
+                                  : "border-white/5 hover:border-white/20 hover:scale-102"
+                              }`}
+                            >
+                              <img
+                                src={preset.url}
+                                alt={preset.label}
+                                className="h-full w-full object-cover"
+                                referrerPolicy="no-referrer"
+                              />
+                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-[8px] text-white font-mono font-black uppercase text-center p-0.5">
+                                {preset.label}
+                              </div>
+                              {isSelected && (
+                                <div className="absolute top-1 right-1 bg-purple-500 rounded-full p-0.5">
+                                  <div className="h-1.5 w-1.5 bg-white rounded-full" />
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <button
-                      type="submit"
-                      className="h-11 rounded-xl bg-purple-500 hover:bg-purple-600 text-white font-black text-xs uppercase tracking-wider px-6 transition shrink-0 flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <Gift className="h-4 w-4" />
-                      {lang === "TR" ? "Çekilişe Katıl" : "Join Raffle"}
-                    </button>
+
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={nickname}
+                          onChange={e => setNickname(e.target.value)}
+                          required
+                          disabled={!!currentUser}
+                          placeholder={currentUser ? currentUser.name : (lang === "TR" ? "Sohbet Takma Adınızı Girin" : "Enter Chat Nickname")}
+                          className="w-full h-11 rounded-xl bg-[#12131a] border border-white/5 px-4 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition font-medium"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="h-11 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs uppercase tracking-wider px-6 transition shrink-0 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-purple-600/15"
+                      >
+                        <Gift className="h-4 w-4" />
+                        {lang === "TR" ? "Çekilişe Katıl" : "Join Raffle"}
+                      </button>
+                    </div>
                   </form>
                 )}
                 {errorMessage && (
@@ -591,18 +730,27 @@ export default function GiveawaySection({ translations, lang, currentUser }: Giv
                         transform: `translateX(calc(-${spinIndex * 134}px + 50% - 67px))`
                       }}
                     >
-                      {spinList.map((entrant, idx) => (
-                        <div
-                          key={idx}
-                          className={`w-[130px] h-10 shrink-0 rounded-lg flex items-center justify-center font-mono font-bold text-xs uppercase transition border ${
-                            spinIndex === idx
-                              ? "bg-purple-500/20 border-purple-500 text-white font-black"
-                              : "bg-[#111218]/80 border-white/5 text-gray-500"
-                          }`}
-                        >
-                          <span className="truncate px-2">{entrant}</span>
-                        </div>
-                      ))}
+                      {spinList.map((entrant, idx) => {
+                        const avatarUrl = entrantAvatars[entrant] || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150&auto=format&fit=crop";
+                        return (
+                          <div
+                            key={idx}
+                            className={`w-[130px] h-10 shrink-0 rounded-lg flex items-center gap-2 pl-1.5 pr-2 font-mono font-bold text-xs uppercase transition border ${
+                              spinIndex === idx
+                                ? "bg-purple-500/20 border-purple-500 text-white font-black"
+                                : "bg-[#111218]/80 border-white/5 text-gray-500"
+                            }`}
+                          >
+                            <img
+                              src={avatarUrl}
+                              alt=""
+                              className="h-6 w-6 rounded-full border border-white/10 shrink-0 object-cover"
+                              referrerPolicy="no-referrer"
+                            />
+                            <span className="truncate">{entrant}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="text-xs font-mono text-gray-500 uppercase tracking-widest text-center px-4">
@@ -633,12 +781,25 @@ export default function GiveawaySection({ translations, lang, currentUser }: Giv
                         <div className="absolute bottom-6 right-1/4 animate-bounce text-pink-400">★</div>
                       </div>
 
-                      <Trophy className="h-10 w-10 text-yellow-400 mb-2 animate-bounce" />
+                      {/* Glowing Winner Avatar */}
+                      <div className="relative mb-3">
+                        <div className="absolute inset-0 rounded-full bg-[#00e676]/30 blur-md animate-pulse" />
+                        <img
+                          src={entrantAvatars[winnerName] || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150&auto=format&fit=crop"}
+                          alt={winnerName}
+                          className="h-16 w-16 rounded-full border-2 border-[#00e676] object-cover relative z-10 mx-auto shadow-lg"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute -bottom-1 -right-1 bg-[#00e676] text-black rounded-full p-1 z-20">
+                          <Trophy className="h-3 w-3" />
+                        </div>
+                      </div>
+
                       <h4 className="text-xs font-mono font-black text-[#00e676] uppercase tracking-wider">
                         {lang === "TR" ? "ÇEKİLİŞ SONUÇLANDI!" : "RAFFLE CONCLUDED!"}
                       </h4>
                       <h2 className="font-display text-2xl font-black text-white uppercase mt-1">
-                        🏆 {winnerName}
+                        {winnerName}
                       </h2>
                       <p className="text-xs text-gray-400 mt-1 max-w-md">
                         {lang === "TR" 
@@ -655,18 +816,28 @@ export default function GiveawaySection({ translations, lang, currentUser }: Giv
                     {lang === "TR" ? "KATILIMCI ADAYLARI" : "ENTRANT CANDIDATES"}
                   </span>
                   <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto scrollbar-thin p-1">
-                    {activeGiveaway.entrants.map((entrant, i) => (
-                      <span 
-                        key={i} 
-                        className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-semibold uppercase tracking-wider border transition ${
-                          entrant === currentUser?.name 
-                            ? "bg-[#00e676]/10 border-[#00e676]/30 text-[#00e676]" 
-                            : "bg-[#161720] border-white/5 text-gray-400"
-                        }`}
-                      >
-                        👤 {entrant}
-                      </span>
-                    ))}
+                    {activeGiveaway.entrants.map((entrant, i) => {
+                      const avatarUrl = entrantAvatars[entrant] || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150&auto=format&fit=crop";
+                      const isMe = entrant === currentUser?.name;
+                      return (
+                        <span 
+                          key={i} 
+                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-mono font-semibold uppercase tracking-wider border transition ${
+                            isMe 
+                              ? "bg-[#00e676]/10 border-[#00e676]/30 text-[#00e676]" 
+                              : "bg-[#161720] border-white/5 text-gray-400"
+                          }`}
+                        >
+                          <img
+                            src={avatarUrl}
+                            alt=""
+                            className="h-4 w-4 rounded-full object-cover border border-white/10"
+                            referrerPolicy="no-referrer"
+                          />
+                          <span>{entrant}</span>
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
 
