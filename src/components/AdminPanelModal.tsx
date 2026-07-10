@@ -390,6 +390,7 @@ export default function AdminPanelModal({
   const [inboxSearch, setInboxSearch] = useState("");
   const [inboxFilter, setInboxFilter] = useState<"all" | "read" | "unread">("all");
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
   const [userSearch, setUserSearch] = useState("");
   const [userRoleFilter, setUserRoleFilter] = useState<"all" | "admin" | "user">("all");
@@ -1229,34 +1230,51 @@ export default function AdminPanelModal({
         {/* Sidebar Navigation Items - mapped exactly like the screenshot */}
         <div className="flex-1 overflow-y-auto py-4 px-2 space-y-1 custom-scrollbar">
           {[
+            { type: "header" as const, label: "Yönetim Paneli" },
             { id: "dashboard", label: "Dashboard", subTab: "dashboard" as const, icon: LayoutDashboard },
-            { id: "announcements", label: "Blog Yorumları", subTab: "announcements" as const, icon: MessageSquare, badge: announcements.length || 2 },
-            { id: "profile", label: "Slider Yönetimi", subTab: "profile" as const, icon: Image },
-            { id: "crosshairs", label: "Menü Yönetimi", subTab: "crosshairs" as const, icon: Target, hasArrow: true },
-            { id: "specs", label: "Sayfalar", subTab: "specs" as const, icon: Cpu },
-            { id: "stream", label: "Hakkımızda", subTab: "stream" as const, icon: Radio, hasArrow: true },
-            { id: "playlists", label: "Hikaye", subTab: "playlists" as const, icon: Youtube },
-            { id: "giveaways", label: "Blog Yönetimi", subTab: "giveaways" as const, icon: Gift, hasArrow: true },
-            { id: "users-gallery", label: "Galeri", subTab: "users" as const, icon: Layers },
-            { id: "giveaway-entrants", label: "Müşteri Yorumları", subTab: "users" as const, icon: MessageSquare },
-            { id: "giveaways-rez", label: "Rezervasyonlar", subTab: "giveaways" as const, icon: Gift },
-            { id: "inbox", label: "İletişim Formları", subTab: "inbox" as const, icon: Mail, badge: messages.length },
-            { id: "users", label: "Kullanıcılar", subTab: "users" as const, icon: Users },
-            { id: "settings", label: "Site Ayarları", subTab: "settings" as const, icon: Settings2, hasArrow: true }
-          ].map((item) => {
-            const isTabActive = (() => {
-              if (item.subTab === "profile" && activeSubTab === "dashboard") return false;
-              if (item.id === "users-gallery" || item.id === "giveaway-entrants") {
-                return activeSubTab === "users" && item.id === "users-gallery"; // prevent dual active highlight
-              }
-              return activeSubTab === item.subTab;
-            })();
+            { id: "announcements", label: "Duyuru Paneli (Duyurular)", subTab: "announcements" as const, icon: Megaphone, badge: announcements.length },
+            { id: "inbox", label: "Gelen İletişim Formları", subTab: "inbox" as const, icon: Mail, badge: messages.length },
+            { id: "users", label: "Kayıtlı Kullanıcılar", subTab: "users" as const, icon: Users },
+
+            { type: "header" as const, label: "Site İçeriği" },
+            { id: "profile", label: "Profil & Slider Yönetimi", subTab: "profile" as const, icon: Image },
+            { id: "crosshairs", label: "Nişangah (Crosshair) Listesi", subTab: "crosshairs" as const, icon: Target },
+            { id: "specs", label: "Sistem & Donanım Özellikleri", subTab: "specs" as const, icon: Cpu },
+            { id: "playlists", label: "YouTube Çalma Listeleri", subTab: "playlists" as const, icon: Youtube },
+
+            { type: "header" as const, label: "Etkinlikler & Ayarlar" },
+            { id: "stream", label: "Canlı Yayın & Simülasyon", subTab: "stream" as const, icon: Radio },
+            { id: "giveaways", label: "İnteraktif Çekiliş Yönetimi", subTab: "giveaways" as const, icon: Gift },
+            { id: "settings", label: "Sistem & Site Ayarları", subTab: "settings" as const, icon: Settings2 }
+          ].map((item, idx) => {
+            if ("type" in item && item.type === "header") {
+              return (
+                <div 
+                  key={`section-hdr-${idx}`} 
+                  className="px-4 pt-4 pb-1.5 text-[8.5px] font-black uppercase tracking-widest text-[#6c757d] border-t border-white/5 first:border-t-0 first:pt-1 mt-3 first:mt-0"
+                >
+                  {item.label}
+                </div>
+              );
+            }
+
+            // At this point item is an interactive item
+            const interactiveItem = item as { 
+              id: string; 
+              label: string; 
+              subTab: typeof activeSubTab; 
+              icon: typeof LayoutDashboard; 
+              badge?: number; 
+              hasArrow?: boolean; 
+            };
+
+            const isTabActive = activeSubTab === interactiveItem.subTab;
 
             return (
               <button
-                key={item.id}
+                key={interactiveItem.id}
                 onClick={() => {
-                  handleTabChange(item.subTab);
+                  handleTabChange(interactiveItem.subTab);
                   setSidebarOpen(false);
                 }}
                 className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition duration-150 cursor-pointer text-left ${
@@ -1266,17 +1284,17 @@ export default function AdminPanelModal({
                 }`}
               >
                 <div className="flex items-center space-x-3 truncate">
-                  <item.icon className={`h-4 w-4 shrink-0 ${isTabActive ? "text-white" : "text-[#8b95a5]"}`} />
-                  <span className="truncate">{item.label}</span>
+                  <interactiveItem.icon className={`h-4 w-4 shrink-0 ${isTabActive ? "text-white" : "text-[#8b95a5]"}`} />
+                  <span className="truncate">{interactiveItem.label}</span>
                 </div>
                 
                 <div className="flex items-center space-x-1.5 shrink-0">
-                  {item.badge !== undefined && item.badge > 0 && (
+                  {interactiveItem.badge !== undefined && interactiveItem.badge > 0 && (
                     <span className="bg-red-500 text-white rounded-full px-1.5 py-0.5 text-[8px] font-black leading-none">
-                      {item.badge}
+                      {interactiveItem.badge}
                     </span>
                   )}
-                  {item.hasArrow && (
+                  {interactiveItem.hasArrow && (
                     <span className="text-[8px] text-gray-500">▼</span>
                   )}
                 </div>
@@ -1308,10 +1326,105 @@ export default function AdminPanelModal({
 
           <div className="flex items-center space-x-4">
             {/* Notification Bell Icon */}
-            <button className="relative transition p-1.5 rounded-full text-gray-400 hover:text-white hover:bg-white/5">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
+                className={`relative transition p-1.5 rounded-full cursor-pointer ${
+                  showNotificationsDropdown 
+                    ? "bg-purple-600/20 text-purple-400" 
+                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                }`}
+                title="Bildirimler"
+              >
+                <Bell className="h-5 w-5" />
+                {messages.some((m) => !m.read) && (
+                  <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                )}
+              </button>
+
+              {showNotificationsDropdown && (
+                <>
+                  {/* Overlay to close the dropdown when clicking outside */}
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setShowNotificationsDropdown(false)}
+                  />
+                  
+                  {/* Notification Dropdown Panel */}
+                  <div className="absolute right-0 mt-2.5 w-[290px] sm:w-[340px] bg-[#11121d] border border-white/10 rounded-2xl shadow-[0_15px_50px_rgba(0,0,0,0.8)] overflow-hidden z-50 text-left">
+                    <div className="p-4 border-b border-white/5 flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-[10px] font-mono font-bold text-purple-400 uppercase tracking-wider">
+                          BİLDİRİMLER ({messages.filter((m) => !m.read).length})
+                        </span>
+                      </div>
+                      {messages.some((m) => !m.read) && (
+                        <button
+                          onClick={() => {
+                            handleMarkAllMessagesRead();
+                            setShowNotificationsDropdown(false);
+                          }}
+                          className="text-[9px] font-black text-purple-400 hover:text-purple-300 uppercase tracking-widest cursor-pointer transition"
+                        >
+                          Tümünü Oku
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="max-h-[280px] overflow-y-auto custom-scrollbar division-y divide-white/5">
+                      {messages.filter((m) => !m.read).length === 0 ? (
+                        <div className="p-6 text-center text-gray-500 space-y-2">
+                          <Bell className="h-6 w-6 mx-auto text-gray-600" />
+                          <p className="text-[10px] font-bold uppercase tracking-wider">OKUNMAMIŞ BİLDİRİM YOK</p>
+                          <p className="text-[9px] text-gray-600 normal-case leading-relaxed">
+                            Gelen kutunuzdaki tüm iletişim formları okundu olarak işaretlenmiş.
+                          </p>
+                        </div>
+                      ) : (
+                        messages
+                          .filter((m) => !m.read)
+                          .slice(0, 4)
+                          .map((msg) => (
+                            <button
+                              key={msg.id}
+                              onClick={() => {
+                                handleToggleMessageRead(msg.id);
+                                setSelectedMessageId(msg.id);
+                                handleTabChange("inbox");
+                                setShowNotificationsDropdown(false);
+                                showToast(`${msg.name} adlı kullanıcıdan gelen mesaj açıldı.`, "info");
+                              }}
+                              className="w-full p-3.5 hover:bg-white/5 flex flex-col space-y-1 transition text-left cursor-pointer border-b border-white/5 last:border-0"
+                            >
+                              <div className="flex justify-between items-start gap-2">
+                                <span className="text-[10px] font-extrabold text-white uppercase tracking-wide truncate">
+                                  ✉️ {msg.name}
+                                </span>
+                                <span className="text-[8px] font-mono font-bold text-gray-500 uppercase shrink-0">
+                                  {msg.date}
+                                </span>
+                              </div>
+                              <p className="text-[9px] text-gray-400 line-clamp-2 leading-relaxed">
+                                {msg.message}
+                              </p>
+                            </button>
+                          ))
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        handleTabChange("inbox");
+                        setShowNotificationsDropdown(false);
+                      }}
+                      className="w-full py-3 bg-[#0d0e16] hover:bg-[#141525] text-center text-[10px] font-black text-purple-400 uppercase tracking-widest border-t border-white/5 transition block cursor-pointer"
+                    >
+                      Gelen Kutusuna Git →
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
 
             <div className="h-5 w-px bg-white/10" />
 
@@ -1341,38 +1454,6 @@ export default function AdminPanelModal({
               transition={{ duration: 0.15, ease: "easeInOut" }}
               className="flex-1"
             >
-            {/* Sub Tabs for Profil Category (Dashboard, Profile edit, Inbox, Registered users) */}
-            {["dashboard", "profile", "inbox", "users"].includes(activeSubTab) && (
-              <div className="flex items-center flex-wrap gap-1.5 mb-5 pb-4 border-b border-white/5">
-                {[
-                  { id: "dashboard", label: "Genel Bakış", icon: LayoutDashboard },
-                  { id: "profile", label: "Profil Bilgileri", icon: Settings2 },
-                  { id: "inbox", label: "Gelen Kutusu", icon: Mail, badge: messages.length },
-                  { id: "users", label: "Kayıtlı Üyeler", icon: Users, badge: registeredUsers.length },
-                ].map((subTab) => (
-                  <button
-                    key={subTab.id}
-                    onClick={() => {
-                      handleTabChange(subTab.id as any);
-                    }}
-                    className={`flex items-center space-x-1.5 sm:space-x-2 rounded-xl px-3 py-1.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider transition cursor-pointer border ${
-                      activeSubTab === subTab.id
-                        ? "bg-purple-600/15 border-purple-500/30 text-purple-400"
-                        : "text-gray-400 hover:text-white hover:bg-white/5 border-white/5 bg-[#0e0f1a]"
-                    }`}
-                  >
-                    <subTab.icon className="h-3 w-3 shrink-0" />
-                    <span>{subTab.label}</span>
-                    {subTab.badge !== undefined && subTab.badge > 0 && (
-                      <span className="bg-red-500 text-white rounded-full px-1.5 py-0.5 text-[8px] font-black leading-none">
-                        {subTab.badge}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-
             {/* Section Header */}
             <div className="flex items-center justify-between border-b pb-3 mb-5 border-white/5">
               <h2 className="font-display text-xs sm:text-sm font-extrabold uppercase tracking-wider flex items-center gap-2 text-white">

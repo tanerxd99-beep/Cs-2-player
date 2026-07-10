@@ -803,13 +803,32 @@ export default function App() {
       <AnimatePresence>
         {liveToast?.show && (
           <motion.div
-            initial={{ opacity: 0, x: 50, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 50, scale: 0.9 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            initial={{ opacity: 0, x: 250, y: 250, scale: 0.7, rotate: 3 }}
+            animate={{ 
+              opacity: 1, 
+              x: 0, 
+              y: 0, 
+              scale: [0.7, 1.05, 0.98, 1],
+              rotate: 0
+            }}
+            exit={{ opacity: 0, x: 250, y: 250, scale: 0.7, rotate: 3 }}
+            transition={{ 
+              type: "spring", 
+              stiffness: 180, 
+              damping: 18,
+              scale: { duration: 0.5, ease: "easeOut" }
+            }}
             className="fixed bottom-6 right-6 z-[9999] w-[320px] sm:w-[360px] rounded-3xl border border-[#00e676]/30 bg-[#090b11] p-5 shadow-[0_10px_35px_rgba(0,230,118,0.15)] overflow-hidden text-left"
             id="live-stream-toast-notification"
           >
+            {/* Ambient green continuous border pulse wave effect */}
+            <motion.div 
+              className="absolute inset-0 rounded-3xl border-2 border-[#00e676]/40 pointer-events-none"
+              initial={{ opacity: 0.6, scale: 1 }}
+              animate={{ opacity: 0, scale: 1.04 }}
+              transition={{ repeat: Infinity, duration: 2, ease: "easeOut" }}
+            />
+
             {/* Ambient green pulsing background blur */}
             <div className="absolute top-0 right-0 h-24 w-24 bg-[#00e676]/5 rounded-full blur-2xl pointer-events-none" />
             
