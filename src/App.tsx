@@ -817,20 +817,18 @@ export default function App() {
       <AnimatePresence>
         {liveToast?.show && (
           <motion.div
-            initial={{ opacity: 0, x: 0, y: 150, scale: 0.9, rotate: 0 }}
+            initial={{ opacity: 0, x: 0, y: 80, scale: 0.95 }}
             animate={{ 
               opacity: 1, 
               x: 0, 
               y: 0, 
-              scale: [0.9, 1.02, 0.99, 1],
-              rotate: 0
+              scale: 1
             }}
-            exit={{ opacity: 0, x: 0, y: 150, scale: 0.9, rotate: 0 }}
+            exit={{ opacity: 0, x: 250, y: 0, scale: 0.95 }}
             transition={{ 
               type: "spring", 
-              stiffness: 180, 
-              damping: 18,
-              scale: { duration: 0.5, ease: "easeOut" }
+              stiffness: 200, 
+              damping: 20
             }}
             className="fixed bottom-6 right-6 z-[9999] w-[320px] sm:w-[360px] rounded-3xl border border-[#00e676]/30 bg-[#090b11] p-5 shadow-[0_10px_35px_rgba(0,230,118,0.15)] overflow-hidden text-left"
             id="live-stream-toast-notification"
