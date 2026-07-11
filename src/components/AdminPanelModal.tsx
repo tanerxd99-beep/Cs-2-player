@@ -1354,7 +1354,7 @@ export default function AdminPanelModal({
                   />
                   
                   {/* Notification Dropdown Panel */}
-                  <div className="absolute right-0 mt-2.5 w-[290px] sm:w-[340px] bg-[#11121d] border border-white/10 rounded-2xl shadow-[0_15px_50px_rgba(0,0,0,0.8)] overflow-hidden z-50 text-left">
+                  <div className="fixed sm:absolute top-16 sm:top-auto left-4 right-4 sm:left-auto sm:right-0 mt-2.5 w-auto sm:w-[340px] bg-[#11121d] border border-white/10 rounded-2xl shadow-[0_15px_50px_rgba(0,0,0,0.8)] overflow-hidden z-50 text-left">
                     <div className="p-4 border-b border-white/5 flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <span className="text-[10px] font-mono font-bold text-purple-400 uppercase tracking-wider">

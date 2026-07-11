@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Bell, BellOff, X, ExternalLink } from "lucide-react";
+import { Bell, BellOff, X, ExternalLink, Copy, Check } from "lucide-react";
 import Header from "./components/Header";
 import HeroSection from "./components/HeroSection";
 import SocialGrid from "./components/SocialGrid";
@@ -204,46 +204,46 @@ export default function App() {
   });
 
   const handleToggleNotifications = async () => {
-    if (typeof window === "undefined" || !("Notification" in window)) {
-      alert(lang === "TR" ? "Tarayıcınız masaüstü bildirimlerini desteklemiyor." : "Your browser does not support desktop notifications.");
+    if (currentUser?.role !== "admin") {
+      alert(lang === "TR" ? "Bu özellik sadece yöneticiler (admin) tarafından kullanılabilir." : "This feature is only available to administrators.");
       return;
     }
 
-    if (Notification.permission === "denied") {
-      alert(lang === "TR" 
-        ? "Masaüstü bildirim izinleri tarayıcınızda engellenmiş. Lütfen adres çubuğundaki kilit simgesinden izin verin." 
-        : "Desktop notification permissions are blocked in your browser. Please grant permissions via the lock icon in the address bar."
-      );
-      return;
-    }
+    const nextState = !notificationsEnabled;
+    setNotificationsEnabled(nextState);
+    localStorage.setItem("weew_notifications_enabled", nextState ? "true" : "false");
 
-    if (Notification.permission === "default") {
-      try {
-        const permission = await Notification.requestPermission();
-        setNotificationPermission(permission);
-        if (permission === "granted") {
-          setNotificationsEnabled(true);
-          localStorage.setItem("weew_notifications_enabled", "true");
-          new Notification(lang === "TR" ? "Bildirimler Etkinleştirildi! 🔔" : "Notifications Enabled! 🔔", {
-            body: lang === "TR" ? "Kanal canlı yayına girdiğinde anlık bildirim alacaksınız." : "You will receive instant notifications when the channel goes live.",
-            icon: profile.profilePhoto || "https://images.unsplash.com/photo-1566492031773-4f4e44671857?q=80&w=200&auto=format&fit=crop"
-          });
-        } else {
-          setNotificationsEnabled(false);
-          localStorage.setItem("weew_notifications_enabled", "false");
+    // Attempt to request real browser notifications permission in background if supported
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (nextState && Notification.permission === "default") {
+        try {
+          const permission = await Notification.requestPermission();
+          setNotificationPermission(permission);
+          if (permission === "granted") {
+            new Notification(lang === "TR" ? "Bildirimler Etkinleştirildi! 🔔" : "Notifications Enabled! 🔔", {
+              body: lang === "TR" ? "Kanal canlı yayına girdiğinde anlık bildirim alacaksınız." : "You will receive instant notifications when the channel goes live.",
+              icon: profile.profilePhoto || "https://images.unsplash.com/photo-1566492031773-4f4e44671857?q=80&w=200&auto=format&fit=crop"
+            });
+          }
+        } catch (err) {
+          console.warn("Background notification permission request failed (likely due to sandbox):", err);
         }
-      } catch (err) {
-        console.warn("Notification permission request failed (likely due to iframe constraints):", err);
-        // Fallback: allow toggling the setting inside our app sandbox regardless of requestPermission block
-        const nextState = !notificationsEnabled;
-        setNotificationsEnabled(nextState);
-        localStorage.setItem("weew_notifications_enabled", nextState ? "true" : "false");
       }
-    } else {
-      // already granted
-      const nextState = !notificationsEnabled;
-      setNotificationsEnabled(nextState);
-      localStorage.setItem("weew_notifications_enabled", nextState ? "true" : "false");
+    }
+
+    // Trigger a gorgeous, interactive visual feedback to show notifications are active in-app!
+    if (nextState) {
+      setLiveToast({
+        show: true,
+        title: lang === "TR" ? "🔔 Bildirimler Aktifleşti!" : "🔔 Notifications Enabled!",
+        body: lang === "TR" 
+          ? "Canlı yayınlar başladığında ve oda etkinliklerinde anlık bildirimler alacaksınız." 
+          : "You will receive real-time alerts at the bottom of the screen for live streams and events."
+      });
+      // Auto close after 4 seconds
+      setTimeout(() => {
+        setLiveToast(prev => prev && (prev.title.includes("Aktifleşti") || prev.title.includes("Enabled")) ? null : prev);
+      }, 4000);
     }
   };
 
@@ -253,6 +253,20 @@ export default function App() {
     title: string;
     body: string;
   } | null>(null);
+
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const handleCopyLink = () => {
+    try {
+      navigator.clipboard.writeText(profile.kickUrl || "https://kick.com/inan");
+      setCopiedLink(true);
+      setTimeout(() => {
+        setCopiedLink(false);
+      }, 2000);
+    } catch (err) {
+      console.error("Failed to copy text: ", err);
+    }
+  };
 
   // Monitor stream state transitions from offline -> online (false -> true)
   const prevLiveRef = useRef(isStreamLive);
@@ -803,15 +817,15 @@ export default function App() {
       <AnimatePresence>
         {liveToast?.show && (
           <motion.div
-            initial={{ opacity: 0, x: 250, y: 250, scale: 0.7, rotate: 3 }}
+            initial={{ opacity: 0, x: 0, y: 150, scale: 0.9, rotate: 0 }}
             animate={{ 
               opacity: 1, 
               x: 0, 
               y: 0, 
-              scale: [0.7, 1.05, 0.98, 1],
+              scale: [0.9, 1.02, 0.99, 1],
               rotate: 0
             }}
-            exit={{ opacity: 0, x: 250, y: 250, scale: 0.7, rotate: 3 }}
+            exit={{ opacity: 0, x: 0, y: 150, scale: 0.9, rotate: 0 }}
             transition={{ 
               type: "spring", 
               stiffness: 180, 
@@ -878,6 +892,37 @@ export default function App() {
                     <span>{lang === "TR" ? "YAYINA KATIL" : "WATCH NOW"}</span>
                     <ExternalLink className="h-3 w-3" />
                   </a>
+                  <button 
+                    onClick={handleCopyLink}
+                    className="px-3 py-2 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-[11px] font-bold transition cursor-pointer flex items-center gap-1.5 min-w-[90px] justify-center select-none"
+                    title={lang === "TR" ? "Yayın Linkini Kopyala" : "Copy Stream Link"}
+                  >
+                    <AnimatePresence mode="wait">
+                      {copiedLink ? (
+                        <motion.span
+                          key="copied"
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0.8, opacity: 0 }}
+                          className="flex items-center gap-1 text-[#00e676]"
+                        >
+                          <Check className="h-3 w-3" />
+                          <span>{lang === "TR" ? "Kopyalandı!" : "Copied!"}</span>
+                        </motion.span>
+                      ) : (
+                        <motion.span
+                          key="copy"
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0.8, opacity: 0 }}
+                          className="flex items-center gap-1"
+                        >
+                          <Copy className="h-3 w-3 text-gray-400" />
+                          <span>{lang === "TR" ? "Kopyala" : "Copy"}</span>
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </button>
                   <button 
                     onClick={() => setLiveToast(null)}
                     className="px-3 py-2 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-[11px] font-bold transition cursor-pointer"

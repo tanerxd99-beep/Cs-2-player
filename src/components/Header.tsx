@@ -135,27 +135,29 @@ export default function Header({
         <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3">
 
           {/* Stream Live Notifications Bell */}
-          <button
-            onClick={onToggleNotifications}
-            id="stream-notification-bell-btn"
-            className={`flex items-center justify-center rounded-lg border p-1.5 sm:p-2 text-xs transition duration-200 cursor-pointer ${
-              notificationsEnabled 
-                ? "bg-[#00e676]/10 border-[#00e676]/30 text-[#00e676] shadow-[0_0_12px_rgba(0,230,118,0.2)] hover:bg-[#00e676]/20" 
-                : "border-white/10 bg-[#161925] text-gray-400 hover:border-purple-500/30 hover:text-white"
-            }`}
-            title={lang === "TR" ? "Canlı Yayın Bildirimlerini Aç/Kapat" : "Toggle Live Stream Notifications"}
-          >
-            <motion.div
-              animate={notificationsEnabled ? { rotate: [0, -15, 15, -15, 15, 0] } : {}}
-              transition={{ repeat: notificationsEnabled ? Infinity : 0, repeatDelay: 6, duration: 0.6 }}
+          {currentUser?.role === "admin" && (
+            <button
+              onClick={onToggleNotifications}
+              id="stream-notification-bell-btn"
+              className={`flex items-center justify-center rounded-lg border p-1.5 sm:p-2 text-xs transition duration-200 cursor-pointer ${
+                notificationsEnabled 
+                  ? "bg-[#00e676]/10 border-[#00e676]/30 text-[#00e676] shadow-[0_0_12px_rgba(0,230,118,0.2)] hover:bg-[#00e676]/20" 
+                  : "border-white/10 bg-[#161925] text-gray-400 hover:border-purple-500/30 hover:text-white"
+              }`}
+              title={lang === "TR" ? "Canlı Yayın Bildirimlerini Aç/Kapat" : "Toggle Live Stream Notifications"}
             >
-              {notificationsEnabled ? (
-                <Bell className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              ) : (
-                <BellOff className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              )}
-            </motion.div>
-          </button>
+              <motion.div
+                animate={notificationsEnabled ? { rotate: [0, -15, 15, -15, 15, 0] } : {}}
+                transition={{ repeat: notificationsEnabled ? Infinity : 0, repeatDelay: 6, duration: 0.6 }}
+              >
+                {notificationsEnabled ? (
+                  <Bell className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                ) : (
+                  <BellOff className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                )}
+              </motion.div>
+            </button>
+          )}
           
           {/* Language Selector Dropdown */}
           <div className="relative shrink-0">
@@ -219,9 +221,17 @@ export default function Header({
                   </button>
                 )}
                 
-                <span className="hidden lg:inline text-xs font-bold text-gray-400 uppercase tracking-wide max-w-[100px] truncate">
-                  {currentUser.name}
-                </span>
+                <div className="hidden lg:flex items-center space-x-1.5">
+                  <span className="text-xs font-bold text-gray-300 uppercase tracking-wide max-w-[100px] truncate">
+                    {currentUser.name}
+                  </span>
+                  {currentUser.role === "admin" && (
+                    <span className="flex items-center space-x-0.5 rounded px-1.5 py-0.5 text-[8px] font-black tracking-wider bg-red-500/20 border border-red-500/30 text-red-400 uppercase">
+                      <Shield className="h-2.5 w-2.5" />
+                      <span>ADMIN</span>
+                    </span>
+                  )}
+                </div>
 
                 <button
                   onClick={onLogout}
@@ -308,8 +318,14 @@ export default function Header({
               <div className="pt-4 mt-4 border-t border-white/5 space-y-2">
                 {currentUser ? (
                   <>
-                    <div className="px-4 py-1.5 text-xs text-gray-400 font-bold uppercase tracking-wider">
-                      Uye: {currentUser.name} ({currentUser.role})
+                    <div className="px-4 py-1.5 text-xs text-gray-400 font-bold uppercase tracking-wider flex items-center space-x-2">
+                      <span>Uye: {currentUser.name}</span>
+                      {currentUser.role === "admin" && (
+                        <span className="flex items-center space-x-0.5 rounded px-1.5 py-0.5 text-[8px] font-black tracking-wider bg-red-500/20 border border-red-500/30 text-red-400 uppercase">
+                          <Shield className="h-2.5 w-2.5" />
+                          <span>ADMIN</span>
+                        </span>
+                      )}
                     </div>
                     {currentUser.role === "admin" && (
                       <button
