@@ -79,7 +79,7 @@ export default function Header({
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-[#0a0b0f]/80 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl 2xl:max-w-screen-2xl items-center justify-between px-2 sm:px-6 lg:px-8">
+      <div className="w-full mx-auto flex h-16 max-w-7xl 2xl:max-w-screen-2xl items-center justify-between px-2 sm:px-6 lg:px-8">
         
         {/* Logo and Name */}
         <div 
@@ -102,7 +102,7 @@ export default function Header({
         </div>
 
         {/* Desktop Nav Items */}
-        <nav className="hidden md:flex items-center space-x-1 lg:space-x-1.5 xl:space-x-2 mx-2 lg:mx-4 min-w-0 overflow-hidden">
+        <nav className="hidden md:flex flex-1 items-center justify-center space-x-0.5 lg:space-x-1 xl:space-x-1.5 mx-2 lg:mx-4 min-w-0 overflow-hidden">
           {menuItems.map((item) => {
             const IconComponent = item.icon;
             const isActive = activeSection === item.id;
@@ -111,7 +111,7 @@ export default function Header({
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
                 id={`nav-btn-${item.id}`}
-                className={`relative flex items-center space-x-1.5 px-2.5 py-1.5 2xl:px-3 rounded-lg text-xs font-semibold transition duration-200 shrink-0 ${
+                className={`relative flex items-center space-x-1 px-1.5 py-1.5 lg:px-2 xl:px-2.5 2xl:px-3 rounded-lg text-xs font-semibold transition duration-200 shrink-0 ${
                   isActive 
                     ? "text-purple-400 font-extrabold" 
                     : "text-gray-400 hover:text-white hover:bg-white/5"
@@ -119,7 +119,7 @@ export default function Header({
                 title={item.label}
               >
                 <IconComponent className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span className="hidden 2xl:inline">{item.label}</span>
+                <span className="hidden xl:inline">{item.label}</span>
                 {isActive && (
                   <motion.div 
                     layoutId="activeNavIndicator"
@@ -222,7 +222,7 @@ export default function Header({
                   </button>
                 )}
                 
-                <div className="hidden lg:flex items-center space-x-1.5">
+                <div className="hidden lg:flex items-center space-x-1.5 min-w-0">
                   <span className="text-xs font-bold text-gray-300 uppercase tracking-wide max-w-[100px] truncate">
                     {currentUser.name}
                   </span>
