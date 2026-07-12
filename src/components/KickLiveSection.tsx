@@ -2,6 +2,7 @@ import React from "react";
 import { Tv, Radio, Heart, Volume2 } from "lucide-react";
 import { TranslationDict } from "../types";
 import { UserAccount } from "./AuthModal";
+import LiveChatBoard from "./LiveChatBoard";
 
 interface KickLiveSectionProps {
   translations: TranslationDict;
@@ -15,6 +16,7 @@ interface KickLiveSectionProps {
   streamCategory?: string;
   streamTitle?: string;
   streamViewers?: string;
+  lang: "TR" | "EN";
 }
 
 export default function KickLiveSection({
@@ -28,7 +30,8 @@ export default function KickLiveSection({
   currentUser,
   streamCategory = "Counter-Strike 2",
   streamTitle = "Rekabetçi Maçlar & Topluluk Yayını",
-  streamViewers = "1400"
+  streamViewers = "1400",
+  lang,
 }: KickLiveSectionProps) {
   return (
     <section id="kick-stream" className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative">
@@ -75,12 +78,12 @@ export default function KickLiveSection({
 
       {/* Main Broadcast Module */}
       <div 
-        className="w-full"
+        className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full items-start"
         id="kick-layout-container"
       >
         
-        {/* Stream Video Player Frame (Spans Full Width now) */}
-        <div className="w-full flex flex-col justify-between rounded-3xl border border-white/5 bg-[#10111a] overflow-hidden shadow-2xl relative min-h-[450px] lg:min-h-[550px]">
+        {/* Stream Video Player Frame */}
+        <div className="lg:col-span-7 xl:col-span-7 w-full flex flex-col justify-between rounded-3xl border border-white/5 bg-[#10111a] overflow-hidden shadow-2xl relative min-h-[420px] lg:min-h-[580px]">
           
           {/* Player Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 bg-[#0e0f17]">
@@ -182,7 +185,18 @@ export default function KickLiveSection({
             {translations.kickGoToStream}
           </a>
         </div>
+
+        {/* Live Chat Board */}
+        <div className="lg:col-span-5 xl:col-span-5 w-full">
+          <LiveChatBoard 
+            translations={translations}
+            isStreamLive={isStreamLive}
+            currentUser={currentUser}
+            lang={lang}
+          />
+        </div>
       </div>
+
     </section>
   );
 }

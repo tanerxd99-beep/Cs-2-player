@@ -256,6 +256,86 @@ export default function App() {
 
   const [copiedLink, setCopiedLink] = useState(false);
 
+  const [userNotifyWhenLive, setUserNotifyWhenLive] = useState<boolean>(() => {
+    return localStorage.getItem("weew_user_notify_when_live") === "true";
+  });
+
+  const handleToggleUserLiveNotification = async () => {
+    const nextState = !userNotifyWhenLive;
+    setUserNotifyWhenLive(nextState);
+    localStorage.setItem("weew_user_notify_when_live", nextState ? "true" : "false");
+
+    if (nextState && typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
+        try {
+          const permission = await Notification.requestPermission();
+          setNotificationPermission(permission);
+          if (permission === "granted") {
+            new Notification(lang === "TR" ? "Bildirimleriniz Açıldı! 🔔" : "Notifications Turned On! 🔔", {
+              body: lang === "TR" 
+                ? "İnan yayına girdiğinde artık sizi tarayıcı bildirimleriyle haberdar edeceğiz." 
+                : "We will now keep you posted with browser notifications when Inan starts streaming.",
+              icon: profile.profilePhoto || "https://images.unsplash.com/photo-1566492031773-4f4e44671857?q=80&w=200&auto=format&fit=crop"
+            });
+          }
+        } catch (err) {
+          console.warn("Notification request permission failed:", err);
+        }
+      } else if (Notification.permission === "granted") {
+        try {
+          new Notification(lang === "TR" ? "Bildirim Tercihi Kaydedildi 🔔" : "Notification Preference Saved 🔔", {
+            body: lang === "TR" 
+              ? "Yayın bildirim hatırlatıcıları başarıyla etkinleştirildi!" 
+              : "Stream notification reminders have been successfully enabled!",
+            icon: profile.profilePhoto || "https://images.unsplash.com/photo-1566492031773-4f4e44671857?q=80&w=200&auto=format&fit=crop"
+          });
+        } catch (err) {
+          console.warn(err);
+        }
+      } else if (Notification.permission === "denied") {
+        alert(lang === "TR" 
+          ? "Lütfen tarayıcı ayarlarınızdan bu site için bildirim izinlerini etkinleştirin." 
+          : "Please enable notification permissions for this site in your browser settings."
+        );
+      }
+    }
+  };
+
+  // Recurring browser-based stream live reminder check
+  useEffect(() => {
+    if (!userNotifyWhenLive) return;
+
+    if (isStreamLive) {
+      const sendReminder = () => {
+        if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+          try {
+            new Notification(lang === "TR" ? "🔴 İnan Canlı Yayında!" : "🔴 Inan is Live!", {
+              body: lang === "TR" 
+                ? `"${streamTitle || 'Kesintisiz Eğlence Başladı!'}" - Yayına katılmak için tıklayın!` 
+                : `"${streamTitle || 'Non-stop Entertainment Started!'}" - Click to watch now!`,
+              icon: profile.profilePhoto || "https://images.unsplash.com/photo-1566492031773-4f4e44671857?q=80&w=200&auto=format&fit=crop",
+              tag: "kick-live-reminder"
+            });
+          } catch (e) {
+            console.warn(e);
+          }
+        }
+      };
+
+      // Send immediate check on mount/activation
+      sendReminder();
+
+      // Recurring reminder interval (e.g., every 5 minutes)
+      const reminderInterval = setInterval(() => {
+        if (isStreamLive) {
+          sendReminder();
+        }
+      }, 300000); // 5 minutes
+
+      return () => clearInterval(reminderInterval);
+    }
+  }, [userNotifyWhenLive, isStreamLive, lang, profile.profilePhoto, streamTitle]);
+
   const handleCopyLink = () => {
     try {
       navigator.clipboard.writeText(profile.kickUrl || "https://kick.com/inan");
@@ -279,7 +359,7 @@ export default function App() {
         : `"${streamTitle || 'Non-stop Entertainment Started!'}" - Streaming ${streamCategory || 'Just Chatting'} now!`;
 
       // 1. Send real browser notification if supported, enabled and granted
-      if (notificationsEnabled && typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+      if ((notificationsEnabled || userNotifyWhenLive) && typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
         try {
           new Notification(title, {
             body: body,
@@ -627,6 +707,7 @@ export default function App() {
                 streamCategory={streamCategory}
                 streamTitle={streamTitle}
                 streamViewers={streamViewers}
+                lang={lang}
               />
 
               {/* YouTube Section */}
@@ -877,6 +958,31 @@ export default function App() {
                 <p className="text-xs text-gray-400 font-medium leading-relaxed">
                   {liveToast.body}
                 </p>
+
+                {/* Notify Me When Live Toggle Switch */}
+                <div className="pt-2 pb-1 border-t border-white/5 mt-2 flex items-center justify-between">
+                  <span className="text-[11px] text-gray-400 font-semibold flex items-center gap-1.5">
+                    <Bell className={`h-3.5 w-3.5 ${userNotifyWhenLive ? "text-[#00e676] fill-[#00e676]/20 animate-bounce" : "text-gray-500"}`} />
+                    {lang === "TR" ? "Yayınlandığında Haber Ver" : "Notify me when live"}
+                  </span>
+                  
+                  {/* Stylish toggle switch */}
+                  <button
+                    onClick={handleToggleUserLiveNotification}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      userNotifyWhenLive ? "bg-[#00e676]" : "bg-gray-700"
+                    }`}
+                    role="switch"
+                    aria-checked={userNotifyWhenLive}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-[#0a0b10] shadow ring-0 transition duration-200 ease-in-out ${
+                        userNotifyWhenLive ? "translate-x-4" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
 
                 {/* Interactive Action CTA buttons */}
                 <div className="pt-3 flex items-center gap-2">
