@@ -203,6 +203,163 @@ export default function AdminPanelModal({
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Live Chat Settings and Roles States
+  const [modPassword, setModPassword] = useState<string>(() => {
+    return localStorage.getItem("weew_moderator_password") || "inanmod";
+  });
+  const [pointsPerMessage, setPointsPerMessage] = useState<number | "">(() => {
+    const saved = localStorage.getItem("weew_points_per_msg");
+    return saved ? parseInt(saved, 10) : 15;
+  });
+  const [pointsPassive, setPointsPassive] = useState<number | "">(() => {
+    const saved = localStorage.getItem("weew_points_passive");
+    return saved ? parseInt(saved, 10) : 10;
+  });
+
+  const [censoredWords, setCensoredWords] = useState<string[]>(() => {
+    const saved = localStorage.getItem("weew_censored_words");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // ignore
+      }
+    }
+    return [
+      "amk", "aq", "sik", "göt", "piç", "yarrak", "orospu", "oç", "meme", "daşşak", "kahpe", "siktir", "yavşak", "amına", "götlek", "pipi", "orospu çocuğu", "şerefsiz", "piz"
+    ];
+  });
+  const [newCensoredWord, setNewCensoredWord] = useState("");
+
+  interface ChatRoleHolder {
+    name: string;
+    role: "subscriber" | "vip" | "moderator";
+    isSimulated?: boolean;
+  }
+
+  const [chatRoleHolders, setChatRoleHolders] = useState<ChatRoleHolder[]>(() => {
+    const saved = localStorage.getItem("weew_chat_role_holders");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // ignore
+      }
+    }
+    return [
+      { name: "Xantares_Jr", role: "vip", isSimulated: true },
+      { name: "Woxic_Fan", role: "subscriber", isSimulated: true },
+      { name: "HeaveN_CS", role: "moderator", isSimulated: true },
+      { name: "ClutchGod", role: "vip", isSimulated: true },
+      { name: "Aim_Canavari", role: "subscriber", isSimulated: true },
+      { name: "FlashbangEnjoyer", role: "moderator", isSimulated: true }
+    ];
+  });
+
+  const handleSaveLiveChatSettings = (newPass: string, perMsg: number | "", passive: number | "") => {
+    setModPassword(newPass);
+    localStorage.setItem("weew_moderator_password", newPass);
+    
+    const finalPerMsg = perMsg === "" ? 0 : perMsg;
+    setPointsPerMessage(finalPerMsg);
+    localStorage.setItem("weew_points_per_msg", finalPerMsg.toString());
+    
+    const finalPassive = passive === "" ? 0 : passive;
+    setPointsPassive(finalPassive);
+    localStorage.setItem("weew_points_passive", finalPassive.toString());
+    
+    // Trigger storage event to notify LiveChatBoard reactively
+    window.dispatchEvent(new Event("storage"));
+    showToast("Canlı Sohbet ayarları (Mod şifresi ve Elmas kazanımları) başarıyla güncellendi!", "success");
+  };
+
+  const handleRemoveRoleHolder = (holder: ChatRoleHolder) => {
+    const guestNick = localStorage.getItem("weew_kick_guest_nick") || (currentUser ? currentUser.name : "Gezgin");
+    const rolesKey = currentUser && currentUser.email
+      ? `weew_unlocked_roles_${currentUser.email}`
+      : `weew_unlocked_roles_guest_${guestNick}`;
+
+    if (!holder.isSimulated) {
+      // It is the current local user! Let's strip their role.
+      const savedUnlocked = localStorage.getItem(rolesKey) || localStorage.getItem("weew_unlocked_roles");
+      if (savedUnlocked) {
+        try {
+          const parsed: string[] = JSON.parse(savedUnlocked);
+          const filtered = parsed.filter(r => r !== holder.role);
+          localStorage.setItem(rolesKey, JSON.stringify(filtered));
+          localStorage.setItem("weew_unlocked_roles", JSON.stringify(filtered)); // fallback
+          
+          // Re-sync test role if active
+          const activeTestRole = localStorage.getItem("weew_chat_test_role");
+          if (activeTestRole === holder.role) {
+            localStorage.setItem("weew_chat_test_role", "user");
+          }
+          
+          // Trigger custom window event to notify components reactively (like LiveChatBoard)
+          window.dispatchEvent(new Event("storage"));
+        } catch (e) {
+          // ignore
+        }
+      }
+      showToast(`Kendi '${holder.role.toUpperCase()}' rolünüz başarıyla elinizden alındı!`, "info");
+    } else {
+      // It's a simulated chatter! Let's filter them out.
+      const nextHolders = chatRoleHolders.filter(h => !(h.name === holder.name && h.role === holder.role));
+      setChatRoleHolders(nextHolders);
+      localStorage.setItem("weew_chat_role_holders", JSON.stringify(nextHolders));
+      
+      // Trigger storage event to notify LiveChatBoard reactively
+      window.dispatchEvent(new Event("storage"));
+      showToast(`${holder.name} isimli simüle kullanıcının '${holder.role.toUpperCase()}' rolü alındı!`, "success");
+    }
+  };
+
+  const getViewerRoleHolders = (): ChatRoleHolder[] => {
+    const guestNick = localStorage.getItem("weew_kick_guest_nick") || (currentUser ? currentUser.name : "Gezgin");
+    const rolesKey = currentUser && currentUser.email
+      ? `weew_unlocked_roles_${currentUser.email}`
+      : `weew_unlocked_roles_guest_${guestNick}`;
+    const savedUnlocked = localStorage.getItem(rolesKey) || localStorage.getItem("weew_unlocked_roles");
+    if (savedUnlocked) {
+      try {
+        const parsed: string[] = JSON.parse(savedUnlocked);
+        return parsed
+          .filter(r => r === "subscriber" || r === "vip" || r === "moderator")
+          .map(r => ({
+            name: `${guestNick} (Siz / Canlı İzleyici)`,
+            role: r as "subscriber" | "vip" | "moderator",
+            isSimulated: false
+          }));
+      } catch (e) {
+        // ignore
+      }
+    }
+    return [];
+  };
+
+  const handleAddCensoredWord = (word: string) => {
+    const trimmed = word.trim().toLowerCase();
+    if (!trimmed) return;
+    if (censoredWords.includes(trimmed)) {
+      showToast("Bu kelime zaten kara listede!", "info");
+      return;
+    }
+    const nextList = [...censoredWords, trimmed];
+    setCensoredWords(nextList);
+    localStorage.setItem("weew_censored_words", JSON.stringify(nextList));
+    window.dispatchEvent(new Event("storage"));
+    setNewCensoredWord("");
+    showToast(`'${trimmed}' kelimesi kara listeye eklendi!`, "success");
+  };
+
+  const handleRemoveCensoredWord = (word: string) => {
+    const nextList = censoredWords.filter(w => w !== word);
+    setCensoredWords(nextList);
+    localStorage.setItem("weew_censored_words", JSON.stringify(nextList));
+    window.dispatchEvent(new Event("storage"));
+    showToast(`'${word}' kelimesi kara listeden çıkartıldı!`, "success");
+  };
+
   // Scroll Position Retention & Fluid Transition Refs
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const tabScrollPositions = React.useRef<Record<string, number>>({});
@@ -3563,6 +3720,205 @@ export default function AdminPanelModal({
 
                     <div className="p-3.5 rounded-xl bg-purple-500/5 border border-purple-500/10 text-[10px] text-purple-300 font-semibold leading-normal">
                       💡 Yayın parametrelerindeki tüm değişiklikler anında kaydedilir ve ana sayfadaki video oynatıcısında canlı olarak güncellenir.
+                    </div>
+                  </div>
+                </div>
+
+                {/* Full-width section: Canlı Sohbet Yönetimi & Rol Atamaları */}
+                <div className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-6">
+                  <div className="flex items-center space-x-3 border-b border-white/5 pb-4">
+                    <span className="p-2 bg-[#00e676]/10 text-[#00e676] rounded-xl text-lg leading-none">💬</span>
+                    <div className="text-left">
+                      <h3 className="font-display text-sm font-bold text-white uppercase tracking-wider">
+                        CANLI SOHBET VE ROL YÖNETİMİ
+                      </h3>
+                      <p className="text-[11px] text-gray-400">
+                        Canlı sohbet mod şifresini, elmas (kanal puanı) kazanım değerlerini ve aktif aboneleri/VIP'leri/modları buradan yönetin.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {/* Left side: Settings Form */}
+                    <div className="space-y-4 text-left">
+                      <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest block font-bold">SOHBET PARAMETRELERİ</span>
+                      
+                      <div className="space-y-4 bg-black/20 p-4 rounded-2xl border border-white/5">
+                        {/* Moderator Password */}
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-mono text-gray-400 uppercase block font-bold">🔑 MODERATÖR KATILIM ŞİFRESİ</label>
+                          <input
+                            type="text"
+                            value={modPassword}
+                            onChange={(e) => setModPassword(e.target.value)}
+                            placeholder="Örn: inanmod"
+                            className="w-full rounded-xl bg-[#0c0d16] border border-white/5 px-4 py-2 text-xs text-white focus:outline-none focus:border-[#00e676]/50 font-mono font-bold"
+                          />
+                          <p className="text-[10px] text-gray-500">Kullanıcıların sohbet panelinden Moderatör olmak için girecekleri şifre.</p>
+                        </div>
+
+                        {/* Diamonds (Points) Per Message */}
+                        <div className="grid grid-cols-2 gap-4 pt-2">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-mono text-gray-400 uppercase block font-bold">💬 MESAJ BAŞI ELMAS</label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="1000"
+                              value={pointsPerMessage}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setPointsPerMessage(val === "" ? "" : Number(val));
+                              }}
+                              className="w-full rounded-xl bg-[#0c0d16] border border-white/5 px-4 py-2 text-xs text-white focus:outline-none focus:border-[#00e676]/50 font-bold"
+                            />
+                            <p className="text-[9px] text-gray-500">Her sohbet mesajı için kazanılan puan.</p>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-mono text-gray-400 uppercase block font-bold">⏱️ PASİF ELMAS (20SN)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="1000"
+                              value={pointsPassive}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setPointsPassive(val === "" ? "" : Number(val));
+                              }}
+                              className="w-full rounded-xl bg-[#0c0d16] border border-white/5 px-4 py-2 text-xs text-white focus:outline-none focus:border-[#00e676]/50 font-bold"
+                            />
+                            <p className="text-[9px] text-gray-500">Yayın açıkken her 20sn'de bir verilen puan.</p>
+                          </div>
+                        </div>
+
+                        {/* Save Button */}
+                        <div className="pt-2">
+                          <button
+                            type="button"
+                            onClick={() => handleSaveLiveChatSettings(modPassword, pointsPerMessage, pointsPassive)}
+                            className="w-full py-2 bg-[#00e676] hover:bg-[#00c853] text-black text-xs font-black uppercase tracking-wider rounded-xl transition duration-200 cursor-pointer"
+                          >
+                            Değişiklikleri Kaydet
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right side: Active Role Holders */}
+                    <div className="space-y-4 text-left">
+                      <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest block font-bold">AKTİF ROL SAHİPLERİ (ABONE, VIP, MOD)</span>
+                      
+                      <div className="bg-black/20 rounded-2xl border border-white/5 overflow-hidden font-semibold">
+                        <div className="max-h-[300px] overflow-y-auto custom-scrollbar divide-y divide-white/5">
+                          {(() => {
+                            const combined = [...getViewerRoleHolders(), ...chatRoleHolders];
+                            if (combined.length === 0) {
+                              return (
+                                <div className="p-8 text-center text-xs text-gray-500">
+                                  Aktif rol sahibi bulunmuyor.
+                                </div>
+                              );
+                            }
+                            return combined.map((holder, idx) => (
+                              <div key={`${holder.name}-${holder.role}-${idx}`} className="p-3 flex items-center justify-between text-xs hover:bg-white/[0.02] transition">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-8 h-8 rounded-full bg-[#11121d] border border-white/10 flex items-center justify-center text-[10px] font-black uppercase">
+                                    {holder.name.substring(0, 2)}
+                                  </div>
+                                  <div>
+                                    <p className="text-white font-bold">{holder.name}</p>
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                      {holder.role === "subscriber" && (
+                                        <span className="bg-purple-500/20 text-purple-300 text-[8px] font-bold px-1.5 py-0.5 rounded uppercase font-black">SUB</span>
+                                      )}
+                                      {holder.role === "vip" && (
+                                        <span className="bg-amber-400/20 text-amber-400 text-[8px] font-bold px-1.5 py-0.5 rounded uppercase font-black">VIP</span>
+                                      )}
+                                      {holder.role === "moderator" && (
+                                        <span className="bg-green-500/20 text-green-400 text-[8px] font-bold px-1.5 py-0.5 rounded uppercase font-black">MOD</span>
+                                      )}
+                                      {holder.isSimulated && (
+                                        <span className="text-gray-500 text-[8px] italic font-semibold">(Simüle)</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveRoleHolder(holder)}
+                                  className="px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-lg text-[10px] font-bold transition duration-150 uppercase tracking-wide cursor-pointer"
+                                >
+                                  Çıkart
+                                </button>
+                              </div>
+                            ));
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Third column: Blacklist / Censored Words */}
+                    <div className="space-y-4 text-left">
+                      <span className="text-[10px] font-mono text-red-400 uppercase tracking-widest block font-bold">🤬 SANSÜRLÜ KELİMELER (KARA LİSTE)</span>
+                      
+                      <div className="bg-black/20 p-4 rounded-2xl border border-white/5 space-y-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-mono text-gray-400 uppercase block font-bold">🆕 SANSÜRLÜ KELİME EKLE</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={newCensoredWord}
+                              onChange={(e) => setNewCensoredWord(e.target.value)}
+                              placeholder="Örn: amk"
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  handleAddCensoredWord(newCensoredWord);
+                                }
+                              }}
+                              className="flex-1 rounded-xl bg-[#0c0d16] border border-white/5 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500/50 font-bold font-mono"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleAddCensoredWord(newCensoredWord)}
+                              className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-black uppercase tracking-wider rounded-xl transition duration-150 cursor-pointer"
+                            >
+                              Ekle
+                            </button>
+                          </div>
+                          <p className="text-[9px] text-gray-500">Eklenen kelimeler sohbette sansürlenecektir.</p>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-mono text-gray-400 uppercase block font-bold">📋 AKTİF SANSÜRLÜ KELİMELER ({censoredWords.length})</label>
+                          <div className="max-h-[190px] overflow-y-auto custom-scrollbar bg-black/30 rounded-xl p-2.5 border border-white/5">
+                            {censoredWords.length === 0 ? (
+                              <p className="text-[10px] text-gray-500 text-center py-4 font-semibold">Sansürlü kelime bulunmuyor.</p>
+                            ) : (
+                              <div className="flex flex-wrap gap-1.5">
+                                {censoredWords.map((word) => (
+                                  <div
+                                    key={word}
+                                    className="flex items-center gap-1 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-[10px] px-2 py-0.5 rounded-lg border border-red-500/10 transition"
+                                  >
+                                    <span className="font-mono font-bold">{word}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveCensoredWord(word)}
+                                      className="text-[9px] text-red-400 hover:text-red-200 ml-0.5 cursor-pointer font-bold select-none"
+                                      title="Kaldır"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
