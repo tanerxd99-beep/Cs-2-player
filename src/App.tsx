@@ -898,20 +898,51 @@ export default function App() {
       <AnimatePresence>
         {liveToast?.show && (
           <motion.div
-            initial={{ opacity: 0, x: 0, y: 80, scale: 0.95 }}
+            initial={{ 
+              opacity: 0, 
+              x: 0, 
+              y: 80, 
+              scale: 0.95,
+              borderColor: "rgba(0, 230, 118, 0.3)",
+              boxShadow: "0 10px 35px rgba(0, 230, 118, 0.15)"
+            }}
             animate={{ 
               opacity: 1, 
               x: 0, 
               y: 0, 
-              scale: 1
+              scale: 1,
+              borderColor: [
+                "rgba(0, 230, 118, 0.3)",
+                "rgba(0, 230, 118, 1)",
+                "rgba(0, 230, 118, 0.2)",
+                "rgba(0, 230, 118, 1)",
+                "rgba(0, 230, 118, 0.3)"
+              ],
+              boxShadow: [
+                "0 10px 35px rgba(0, 230, 118, 0.15)",
+                "0 0 25px rgba(0, 230, 118, 0.6)",
+                "0 10px 35px rgba(0, 230, 118, 0.15)",
+                "0 0 25px rgba(0, 230, 118, 0.6)",
+                "0 10px 35px rgba(0, 230, 118, 0.15)"
+              ]
             }}
             exit={{ opacity: 0, x: 250, y: 0, scale: 0.95 }}
             transition={{ 
               type: "spring", 
               stiffness: 200, 
-              damping: 20
+              damping: 20,
+              borderColor: {
+                delay: 0.1,
+                duration: 1.5,
+                ease: "easeInOut"
+              },
+              boxShadow: {
+                delay: 0.1,
+                duration: 1.5,
+                ease: "easeInOut"
+              }
             }}
-            className="fixed bottom-6 right-6 z-[9999] w-[320px] sm:w-[360px] rounded-3xl border border-[#00e676]/30 bg-[#090b11] p-5 shadow-[0_10px_35px_rgba(0,230,118,0.15)] overflow-hidden text-left"
+            className="fixed bottom-6 right-6 z-[9999] w-[320px] sm:w-[360px] rounded-3xl border bg-[#090b11] p-5 overflow-hidden text-left"
             id="live-stream-toast-notification"
           >
             {/* Ambient green continuous border pulse wave effect */}

@@ -20,6 +20,92 @@ export const AVATAR_PRESETS = [
   { url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop", label: "Speed Demon" },
 ];
 
+export const getSkinDetails = (prizeName: string) => {
+  const parts = prizeName.split("|");
+  const weapon = parts[0]?.trim() || "Süper Ödül";
+  let skinWithWear = parts[1]?.trim() || "Özel Kaplama";
+  
+  let wear = "Factory New";
+  let wearTR = "Fabrikadan Yeni Çıkmış";
+  if (skinWithWear.includes("(")) {
+    const wearPart = skinWithWear.substring(skinWithWear.indexOf("(") + 1, skinWithWear.indexOf(")"));
+    wear = wearPart;
+    skinWithWear = skinWithWear.substring(0, skinWithWear.indexOf("(")).trim();
+  }
+  
+  if (wear.toLowerCase().includes("factory new") || wear.toLowerCase().includes("fn")) {
+    wearTR = "Fabrikadan Yeni Çıkmış (FN)";
+  } else if (wear.toLowerCase().includes("minimal wear") || wear.toLowerCase().includes("mw")) {
+    wearTR = "Az Aşınmış (MW)";
+  } else if (wear.toLowerCase().includes("field-tested") || wear.toLowerCase().includes("ft")) {
+    wearTR = "Görevde Kullanılmış (FT)";
+  } else if (wear.toLowerCase().includes("well-worn") || wear.toLowerCase().includes("ww")) {
+    wearTR = "Eskimiş (WW)";
+  } else if (wear.toLowerCase().includes("battle-scarred") || wear.toLowerCase().includes("bs")) {
+    wearTR = "Savaş Yarası (BS)";
+  } else {
+    wearTR = wear;
+  }
+
+  let rarity = "Covert";
+  let rarityTR = "Gizli (Covert)";
+  let color = "#eb4b4b"; 
+  let bgGradient = "from-[#eb4b4b]/20 via-[#eb4b4b]/5 to-transparent";
+
+  const lowerName = prizeName.toLowerCase();
+  if (lowerName.includes("temukau") || lowerName.includes("empress") || lowerName.includes("howl") || lowerName.includes("dragon lore") || lowerName.includes("fade") || lowerName.includes("hyper beast") || lowerName.includes("vulcan") || lowerName.includes("asiimov") || lowerName.includes("printstream")) {
+    rarity = "Covert";
+    rarityTR = "Gizli (Covert)";
+    color = "#eb4b4b"; 
+    bgGradient = "from-[#eb4b4b]/20 via-[#eb4b4b]/5 to-transparent";
+  } else if (lowerName.includes("ice cooled") || lowerName.includes("redline") || lowerName.includes("frontside misty") || lowerName.includes("cyrex") || lowerName.includes("decimator")) {
+    rarity = "Classified";
+    rarityTR = "Gizemli (Classified)";
+    color = "#d32ce6"; 
+    bgGradient = "from-[#d32ce6]/20 via-[#d32ce6]/5 to-transparent";
+  } else if (lowerName.includes("restricted") || lowerName.includes("slate") || lowerName.includes("nightwish") || lowerName.includes("atheris")) {
+    rarity = "Restricted";
+    rarityTR = "Yasaklı (Restricted)";
+    color = "#8847ff"; 
+    bgGradient = "from-[#8847ff]/20 via-[#8847ff]/5 to-transparent";
+  } else {
+    rarity = "Mil-Spec";
+    rarityTR = "Askeri Sınıf (Mil-Spec)";
+    color = "#4b69ff"; 
+    bgGradient = "from-[#4b69ff]/20 via-[#4b69ff]/5 to-transparent";
+  }
+
+  // Generates consistent float based on character codes
+  let hash = 0;
+  for (let i = 0; i < prizeName.length; i++) {
+    hash += prizeName.charCodeAt(i);
+  }
+  let floatVal = 0.03;
+  if (wear.toLowerCase().includes("factory new")) {
+    floatVal = 0.001 + (hash % 69) * 0.001;
+  } else if (wear.toLowerCase().includes("minimal wear")) {
+    floatVal = 0.07 + (hash % 79) * 0.001;
+  } else if (wear.toLowerCase().includes("field-tested")) {
+    floatVal = 0.15 + (hash % 229) * 0.001;
+  } else if (wear.toLowerCase().includes("well-worn")) {
+    floatVal = 0.38 + (hash % 69) * 0.001;
+  } else {
+    floatVal = 0.45 + (hash % 549) * 0.001;
+  }
+
+  return {
+    weapon,
+    skin: skinWithWear,
+    wear,
+    wearTR,
+    rarity,
+    rarityTR,
+    color,
+    bgGradient,
+    float: floatVal.toFixed(4)
+  };
+};
+
 interface GiveawaySectionProps {
   translations: TranslationDict;
   lang: "TR" | "EN";
@@ -45,6 +131,82 @@ export default function GiveawaySection({ translations, lang, currentUser }: Giv
   const [selectedPresetAvatar, setSelectedPresetAvatar] = useState(AVATAR_PRESETS[0].url);
   const [hasJoined, setHasJoined] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  // Countdown timer state
+  const [timeLeft, setTimeLeft] = useState<string>("00:00");
+
+  // Local sync stats for ticket shop integration
+  const [guestNickname, setGuestNickname] = useState<string>(() => {
+    return localStorage.getItem("weew_kick_guest_nick") || "Gezgin#1337";
+  });
+
+  const getPointsKey = () => {
+    if (currentUser && currentUser.email) {
+      return `weew_channel_points_${currentUser.email}`;
+    }
+    return `weew_channel_points_guest_${guestNickname}`;
+  };
+
+  const [channelPoints, setChannelPoints] = useState<number>(() => {
+    const key = currentUser && currentUser.email
+      ? `weew_channel_points_${currentUser.email}`
+      : `weew_channel_points_guest_${localStorage.getItem("weew_kick_guest_nick") || "Gezgin#1337"}`;
+    const saved = localStorage.getItem(key);
+    return saved ? parseInt(saved, 10) : 50;
+  });
+
+  // Keep channelPoints and nickname synchronized with LocalStorage / other components
+  useEffect(() => {
+    const handleSync = () => {
+      const currentNick = localStorage.getItem("weew_kick_guest_nick") || "Gezgin#1337";
+      setGuestNickname(currentNick);
+      
+      const key = currentUser && currentUser.email
+        ? `weew_channel_points_${currentUser.email}`
+        : `weew_channel_points_guest_${currentNick}`;
+      const saved = localStorage.getItem(key);
+      setChannelPoints(saved ? parseInt(saved, 10) : 50);
+    };
+
+    window.addEventListener("weew_points_update", handleSync);
+    window.addEventListener("weew_chat_nick_changed", handleSync);
+    window.addEventListener("storage", handleSync);
+    return () => {
+      window.removeEventListener("weew_points_update", handleSync);
+      window.removeEventListener("weew_chat_nick_changed", handleSync);
+      window.removeEventListener("storage", handleSync);
+    };
+  }, [currentUser]);
+
+  // Live Countdown Timer logic
+  useEffect(() => {
+    if (!activeGiveaway) {
+      setTimeLeft("00:00");
+      return;
+    }
+
+    const updateTimer = () => {
+      const diff = new Date(activeGiveaway.endTime).getTime() - Date.now();
+      if (diff <= 0) {
+        setTimeLeft(lang === "TR" ? "SÜRE DOLDU" : "TIME'S UP");
+        return;
+      }
+
+      const hours = Math.floor(diff / 3600000);
+      const minutes = Math.floor((diff % 3600000) / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+
+      const hStr = hours > 0 ? `${hours}:` : "";
+      const mStr = minutes < 10 ? `0${minutes}` : minutes;
+      const sStr = seconds < 10 ? `0${seconds}` : seconds;
+
+      setTimeLeft(`${hStr}${mStr}:${sStr}`);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [activeGiveaway, lang]);
   
   // Custom creator states
   const [showCreator, setShowCreator] = useState(false);
@@ -571,132 +733,335 @@ export default function GiveawaySection({ translations, lang, currentUser }: Giv
         
         {/* Active Giveaway Section (Left 2 columns) */}
         <div className="lg:col-span-2 space-y-6">
-          {activeGiveaway ? (
-            <div className="p-6 rounded-3xl border border-white/5 bg-[#12131a]/60 backdrop-blur-sm relative overflow-hidden space-y-6">
-              
-              {/* Glowing decorative ambient corner */}
-              <div className="absolute top-0 right-0 h-40 w-40 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
-
-              <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-                <div>
-                  <div className="inline-flex items-center gap-1.5 rounded-full bg-[#00e676]/10 px-3 py-1 border border-[#00e676]/20 text-[#00e676] text-[10px] font-mono font-black uppercase tracking-wider mb-3">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#00e676] animate-pulse" />
-                    {lang === "TR" ? "AKTİF KATILIM" : "ACTIVE RAFFLE"}
+          {(() => {
+            if (!activeGiveaway) {
+              return (
+                <div className="p-8 rounded-3xl border border-dashed border-white/10 bg-[#12131a]/30 text-center flex flex-col items-center justify-center space-y-3">
+                  <Gift className="h-12 w-12 text-gray-600 animate-pulse" />
+                  <div>
+                    <h3 className="font-display text-md font-bold text-gray-400 uppercase tracking-wide">
+                      {lang === "TR" ? "Aktif Çekiliş Bulunmuyor" : "No Active Giveaway"}
+                    </h3>
+                    <p className="text-xs text-gray-500 max-w-sm mx-auto mt-1">
+                      {lang === "TR" 
+                        ? "Şu anda yayında aktif bir çekiliş yok. Admin panelinden veya yukarıdan yeni bir çekiliş başlatabilirsiniz." 
+                        : "No active giveaways running. You can initiate a custom one from the trigger button above."}
+                    </p>
                   </div>
-
-                  <h3 className="font-display text-xl sm:text-2xl font-black text-white leading-snug">
-                    {activeGiveaway.prize}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-gray-400 font-medium leading-relaxed mt-2 max-w-2xl">
-                    {lang === "TR" ? activeGiveaway.descriptionTR : activeGiveaway.descriptionEN}
-                  </p>
                 </div>
+              );
+            }
 
-                <div className="shrink-0 flex sm:flex-col items-end gap-1 font-mono">
-                  <span className="text-[10px] text-gray-500 font-bold uppercase">{lang === "TR" ? "KATILAN" : "ENTRANTS"}</span>
-                  <span className="text-2xl font-black text-purple-400 flex items-center gap-1.5">
-                    <Users className="h-5 w-5 text-purple-400" />
-                    {activeGiveaway.entrants.length}
-                  </span>
-                </div>
-              </div>
+            const skin = getSkinDetails(activeGiveaway.prize);
+            const myName = currentUser ? currentUser.name : (localStorage.getItem("weew_giveaway_anon_name") || nickname || "Gezgin");
+            const myTickets = activeGiveaway.entrants.filter(n => n === myName).length;
 
-              {/* Enter giveaway widget */}
-              <div className="p-5 rounded-2xl bg-black/40 border border-white/5">
-                {hasJoined ? (
-                  <div className="flex items-center gap-3 text-[#00e676]">
-                    <CheckCircle2 className="h-5 w-5 shrink-0" />
-                    <div>
-                      <h4 className="text-xs font-black uppercase tracking-wider">
-                        {lang === "TR" ? "Çekiliş Listesindesiniz!" : "You are in the list!"}
-                      </h4>
-                      <p className="text-[11px] text-gray-400 mt-0.5">
-                        {lang === "TR" 
-                          ? "Adınız listeye başarıyla eklendi. Yayıncının kurayı çekmesini bekleyin." 
-                          : "Your name was registered successfully. Wait for the host to draw the winner."}
-                      </p>
+            return (
+              <div className="p-6 rounded-3xl border border-white/5 bg-[#12131a]/60 backdrop-blur-sm relative overflow-hidden space-y-6">
+                
+                {/* Glowing decorative ambient corner with skin rarity color */}
+                <div 
+                  className="absolute top-0 right-0 h-48 w-48 rounded-full blur-3xl pointer-events-none transition-all duration-500 opacity-20"
+                  style={{ backgroundColor: skin.color }}
+                />
+
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4 border-b border-white/5 pb-5">
+                  <div className="space-y-1.5 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="inline-flex items-center gap-1.5 rounded-full bg-[#00e676]/10 px-3 py-1 border border-[#00e676]/20 text-[#00e676] text-[10px] font-mono font-black uppercase tracking-wider">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#00e676] animate-pulse" />
+                        {lang === "TR" ? "AKTİF KATILIM" : "ACTIVE RAFFLE"}
+                      </div>
+                      
+                      {/* Interactive countdown clock */}
+                      <div className="inline-flex items-center gap-1.5 rounded-full bg-purple-500/10 px-3 py-1 border border-purple-500/20 text-purple-400 text-[10px] font-mono font-black uppercase tracking-wider">
+                        <span className="animate-pulse">⏳</span>
+                        {timeLeft}
+                      </div>
                     </div>
+
+                    <h3 className="font-display text-xl sm:text-2xl font-black text-white leading-snug">
+                      {activeGiveaway.prize}
+                    </h3>
+                    <p className="text-xs text-gray-400 font-medium leading-relaxed max-w-2xl">
+                      {lang === "TR" ? activeGiveaway.descriptionTR : activeGiveaway.descriptionEN}
+                    </p>
                   </div>
-                ) : (
-                  <form onSubmit={handleJoinGiveaway} className="space-y-4">
-                    {/* Character Avatar Picker */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-1.5">
-                        <User className="h-3.5 w-3.5 text-purple-400" />
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                          {lang === "TR" ? "Yayın Odası Karakter Avatarını Seç" : "Select Your Room Character Avatar"}
+
+                  <div className="shrink-0 flex sm:flex-col items-end gap-1 font-mono">
+                    <span className="text-[10px] text-gray-500 font-bold uppercase">{lang === "TR" ? "KATILAN" : "ENTRANTS"}</span>
+                    <span className="text-2xl font-black text-purple-400 flex items-center gap-1.5">
+                      <Users className="h-5 w-5 text-purple-400" />
+                      {activeGiveaway.entrants.length}
+                    </span>
+                  </div>
+                </div>
+
+                {/* CS2 Premium Weapon Preview Card */}
+                <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-black/40 p-5 flex flex-col md:flex-row items-center gap-6">
+                  {/* Absolute subtle background grid pattern */}
+                  <div className="absolute inset-0 opacity-[0.03] bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
+                  
+                  {/* Gun silhouette / aesthetic geometric representation */}
+                  <div 
+                    className={`relative shrink-0 w-32 h-32 rounded-xl bg-gradient-to-br ${skin.bgGradient} border border-white/5 flex flex-col items-center justify-center p-3`}
+                  >
+                    <span className="text-5xl drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]">🔫</span>
+                    <span 
+                      className="absolute bottom-2 px-1.5 py-0.5 rounded text-[8px] font-mono font-black uppercase tracking-widest text-black"
+                      style={{ backgroundColor: skin.color }}
+                    >
+                      {skin.rarity}
+                    </span>
+                  </div>
+
+                  {/* Weapon attributes & Float slider bar */}
+                  <div className="flex-1 w-full space-y-3.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-black text-white font-mono uppercase tracking-wider">{skin.weapon}</span>
+                      <span className="text-xs text-gray-400">|</span>
+                      <span className="text-xs font-semibold text-gray-300">{skin.skin}</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-[11px] font-mono">
+                      <div>
+                        <span className="text-gray-500 block uppercase font-bold text-[9px]">{lang === "TR" ? "DIŞ GÖRÜNÜŞ" : "EXTERIOR"}</span>
+                        <span className="text-gray-200 font-medium">{lang === "TR" ? skin.wearTR : skin.wear}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block uppercase font-bold text-[9px]">{lang === "TR" ? "KALİTE GRUBU" : "GRADE"}</span>
+                        <span className="font-bold uppercase" style={{ color: skin.color }}>{lang === "TR" ? skin.rarityTR : skin.rarity}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block uppercase font-bold text-[9px]">FLOAT VALUE</span>
+                        <span className="text-yellow-400 font-black">{skin.float}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block uppercase font-bold text-[9px]">{lang === "TR" ? "ÖZEL NİTELİK" : "ATTRIBUTES"}</span>
+                        <span className="text-[#00e676] font-bold flex items-center gap-1">
+                          <Star className="h-3 w-3 text-[#00e676] fill-[#00e676]" />
+                          StatTrak™
                         </span>
                       </div>
-                      <div className="flex gap-2.5 overflow-x-auto pb-2 pt-1 custom-scrollbar scroll-smooth">
-                        {AVATAR_PRESETS.map((preset) => {
-                          const isSelected = selectedPresetAvatar === preset.url;
-                          return (
-                            <button
-                              key={preset.url}
-                              type="button"
-                              onClick={() => setSelectedPresetAvatar(preset.url)}
-                              className={`relative group shrink-0 h-14 w-14 rounded-xl border-2 transition duration-200 overflow-hidden cursor-pointer ${
-                                isSelected
-                                  ? "border-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.4)] scale-105"
-                                  : "border-white/5 hover:border-white/20 hover:scale-102"
-                              }`}
-                            >
-                              <img
-                                src={preset.url}
-                                alt={preset.label}
-                                className="h-full w-full object-cover"
-                                referrerPolicy="no-referrer"
-                              />
-                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-[8px] text-white font-mono font-black uppercase text-center p-0.5">
-                                {preset.label}
-                              </div>
-                              {isSelected && (
-                                <div className="absolute top-1 right-1 bg-purple-500 rounded-full p-0.5">
-                                  <div className="h-1.5 w-1.5 bg-white rounded-full" />
-                                </div>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <div className="flex-1">
-                        <input
-                          type="text"
-                          value={nickname}
-                          onChange={e => setNickname(e.target.value)}
-                          required
-                          disabled={!!currentUser}
-                          placeholder={currentUser ? currentUser.name : (lang === "TR" ? "Sohbet Takma Adınızı Girin" : "Enter Chat Nickname")}
-                          className="w-full h-11 rounded-xl bg-[#12131a] border border-white/5 px-4 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition font-medium"
+                    {/* Highly tactile CS2 Float Spectrum Slider Bar */}
+                    <div className="space-y-1 pt-1">
+                      <div className="flex justify-between text-[8px] font-mono font-black text-gray-500">
+                        <span>FN (0.00)</span>
+                        <span>MW (0.07)</span>
+                        <span>FT (0.15)</span>
+                        <span>WW (0.38)</span>
+                        <span>BS (0.45 - 1.0)</span>
+                      </div>
+                      <div className="relative h-2 w-full bg-gradient-to-r from-blue-500 via-green-400 to-red-600 rounded-full border border-white/5">
+                        {/* Float point handle indicator indicator */}
+                        <div 
+                          className="absolute h-3 w-3 rounded-full bg-white border border-black shadow-[0_0_8px_rgba(255,255,255,1)] -top-[2px] transition-all duration-1000"
+                          style={{ left: `calc(${Math.min(parseFloat(skin.float) * 100, 100)}% - 6px)` }}
                         />
                       </div>
-                      <button
-                        type="submit"
-                        className="h-11 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs uppercase tracking-wider px-6 transition shrink-0 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-purple-600/15"
-                      >
-                        <Gift className="h-4 w-4" />
-                        {lang === "TR" ? "Çekilişe Katıl" : "Join Raffle"}
-                      </button>
                     </div>
-                  </form>
-                )}
-                {errorMessage && (
-                  <p className="text-xs text-red-400 font-mono mt-2 flex items-center gap-1">
-                    <AlertCircle className="h-3.5 w-3.5" />
-                    {errorMessage}
-                  </p>
-                )}
-              </div>
+                  </div>
+                </div>
 
-              {/* ROULETTE TICKER SPINNER (Interactive animation panel) */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h4 className="text-xs font-mono text-gray-400 uppercase font-black tracking-widest">
-                    {lang === "TR" ? "⚡ KURA SİMÜLASYONU VE ÇARKI" : "⚡ DRAW WHEEL & SIMULATION"}
-                  </h4>
+                {/* Enter giveaway widget & Ticket Shop Hub */}
+                <div className="p-5 rounded-2xl bg-black/40 border border-white/5 relative overflow-hidden">
+                  {hasJoined ? (
+                    <div className="space-y-4">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-white/5 pb-4">
+                        <div className="flex items-center gap-3 text-[#00e676]">
+                          <CheckCircle2 className="h-6 w-6 shrink-0" />
+                          <div>
+                            <h4 className="text-xs font-black uppercase tracking-wider">
+                              {lang === "TR" ? "Çekiliş Katılımınız Doğrulandı!" : "Raffle Registration Verified!"}
+                            </h4>
+                            <p className="text-[11px] text-gray-400 mt-0.5">
+                              {lang === "TR" 
+                                ? `${myName} olarak listeye kaydoldunuz.` 
+                                : `Registered as ${myName}.`}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Interactive wallet balance */}
+                        <div className="px-3 py-1.5 rounded-xl bg-amber-400/10 border border-amber-400/20 text-amber-400 font-mono text-[10px] font-bold flex items-center gap-1.5">
+                          <span>💎</span>
+                          <span>{lang === "TR" ? "BAKİYENİZ:" : "BALANCE:"} {channelPoints} PUAN</span>
+                        </div>
+                      </div>
+
+                      {/* Dynamic Ticket Hub section */}
+                      <div className="p-4 rounded-xl border border-purple-500/20 bg-purple-500/5 space-y-4">
+                        <div className="flex justify-between items-center flex-wrap gap-2">
+                          <div>
+                            <h5 className="font-display text-xs font-extrabold text-purple-300 uppercase tracking-wide flex items-center gap-1.5">
+                              <Gift className="h-4 w-4" />
+                              {lang === "TR" ? "🎫 BİLET MERKEZİ (ŞANS ARTTIRICI)" : "🎫 TICKET CENTER (WIN MULTIPLIER)"}
+                            </h5>
+                            <p className="text-[10px] text-gray-400 mt-0.5">
+                              {lang === "TR" 
+                                ? `Kanal puanları ile daha fazla bilet alın, adınız kurada daha çok çıksın! (+%${myTickets * 100} Şans)` 
+                                : `Buy additional tickets with channel points to multiply your odds! (+%${myTickets * 100} Chance)`}
+                            </p>
+                          </div>
+
+                          <div className="font-mono text-xs font-black text-purple-400 bg-purple-500/15 border border-purple-500/30 px-2.5 py-1 rounded-lg">
+                            {myTickets} / 5 bilet
+                          </div>
+                        </div>
+
+                        {/* Visual Ticket progression check dots */}
+                        <div className="flex gap-2.5 justify-center py-2">
+                          {[1, 2, 3, 4, 5].map((num) => {
+                            const active = num <= myTickets;
+                            return (
+                              <div 
+                                key={num}
+                                className={`h-10 w-12 rounded-lg border flex flex-col items-center justify-center font-mono font-black text-xs transition duration-300 ${
+                                  active 
+                                    ? "bg-purple-600 border-purple-400 text-white shadow-[0_0_10px_rgba(168,85,247,0.3)] scale-105" 
+                                    : "bg-black/40 border-white/5 text-gray-600"
+                                }`}
+                                title={active ? "Bilet Alındı!" : "Kilitli Bilet"}
+                              >
+                                <span className="text-[10px]">🎫</span>
+                                <span className="text-[8px] mt-0.5">#{num}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Ticket purchase action button */}
+                        {myTickets < 5 ? (
+                          <button
+                            type="button"
+                            disabled={channelPoints < 15}
+                            onClick={() => {
+                              // Deduct points
+                              const nextPoints = channelPoints - 15;
+                              setChannelPoints(nextPoints);
+                              localStorage.setItem(getPointsKey(), nextPoints.toString());
+
+                              // Add entrant name again
+                              const updated = giveaways.map(g => {
+                                if (g.id === activeGiveaway.id) {
+                                  return {
+                                    ...g,
+                                    entrants: [...g.entrants, myName]
+                                  };
+                                }
+                                return g;
+                              });
+                              saveAndSetGiveaways(updated);
+
+                              // Success notifications & custom point triggers
+                              window.dispatchEvent(new CustomEvent("weew_points_update"));
+                              
+                              if (lang === "TR") {
+                                alert(`🎫 Tebrikler! 15 Kanal Puanı karşılığında başarıyla ek çekiliş bileti aldınız! Toplam biletiniz: ${myTickets + 1}`);
+                              } else {
+                                alert(`🎫 Success! You bought an extra raffle ticket for 15 Channel Points! Total tickets: ${myTickets + 1}`);
+                              }
+                            }}
+                            className={`w-full py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition duration-200 flex items-center justify-center gap-2 cursor-pointer ${
+                              channelPoints >= 15
+                                ? "bg-amber-400 hover:bg-amber-500 text-black shadow-lg shadow-amber-400/10"
+                                : "bg-gray-800 text-gray-500 cursor-not-allowed border border-white/5"
+                            }`}
+                          >
+                            <Gift className="h-4 w-4 shrink-0" />
+                            {lang === "TR" 
+                              ? `Ekstra 1 Bilet Satın Al (-15 Kanal Puanı)` 
+                              : `Buy Extra 1 Ticket (-15 Channel Points)`}
+                          </button>
+                        ) : (
+                          <div className="text-center text-[#00e676] font-bold text-[10px] uppercase py-1 border border-[#00e676]/20 bg-[#00e676]/5 rounded-xl">
+                            ✅ {lang === "TR" ? "MAKSİMUM BİLET SINIRINA ULAŞTINIZ! ŞANSINIZ TAVAN YAPTI!" : "MAX TICKET LIMIT REACHED! WIN CHANCE OPTIMIZED!"}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleJoinGiveaway} className="space-y-4">
+                      {/* Character Avatar Picker */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1.5">
+                          <User className="h-3.5 w-3.5 text-purple-400" />
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                            {lang === "TR" ? "Yayın Odası Karakter Avatarını Seç" : "Select Your Room Character Avatar"}
+                          </span>
+                        </div>
+                        <div className="flex gap-2.5 overflow-x-auto pb-2 pt-1 custom-scrollbar scroll-smooth">
+                          {AVATAR_PRESETS.map((preset) => {
+                            const isSelected = selectedPresetAvatar === preset.url;
+                            return (
+                              <button
+                                key={preset.url}
+                                type="button"
+                                onClick={() => setSelectedPresetAvatar(preset.url)}
+                                className={`relative group shrink-0 h-14 w-14 rounded-xl border-2 transition duration-200 overflow-hidden cursor-pointer ${
+                                  isSelected
+                                    ? "border-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.4)] scale-105"
+                                    : "border-white/5 hover:border-white/20 hover:scale-102"
+                                }`}
+                              >
+                                <img
+                                  src={preset.url}
+                                  alt={preset.label}
+                                  className="h-full w-full object-cover"
+                                  referrerPolicy="no-referrer"
+                                />
+                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-[8px] text-white font-mono font-black uppercase text-center p-0.5">
+                                  {preset.label}
+                                </div>
+                                {isSelected && (
+                                  <div className="absolute top-1 right-1 bg-purple-500 rounded-full p-0.5">
+                                    <div className="h-1.5 w-1.5 bg-white rounded-full" />
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="flex-1">
+                          <input
+                            type="text"
+                            value={nickname}
+                            onChange={e => setNickname(e.target.value)}
+                            required
+                            disabled={!!currentUser}
+                            placeholder={currentUser ? currentUser.name : (lang === "TR" ? "Sohbet Takma Adınızı Girin" : "Enter Chat Nickname")}
+                            className="w-full h-11 rounded-xl bg-[#12131a] border border-white/5 px-4 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition font-medium"
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          className="h-11 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs uppercase tracking-wider px-6 transition shrink-0 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-purple-600/15"
+                        >
+                          <Gift className="h-4 w-4" />
+                          {lang === "TR" ? "Çekilişe Katıl" : "Join Raffle"}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                  {errorMessage && (
+                    <p className="text-xs text-red-400 font-mono mt-2 flex items-center gap-1">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      {errorMessage}
+                    </p>
+                  )}
+                </div>
+
+                {/* ROULETTE TICKER SPINNER (Interactive animation panel) */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-xs font-mono text-gray-400 uppercase font-black tracking-widest">
+                      {lang === "TR" ? "⚡ KURA SİMÜLASYONU VE ÇARKI" : "⚡ DRAW WHEEL & SIMULATION"}
+                    </h4>
 
                   {currentUser?.role === "admin" ? (
                     <button
@@ -842,23 +1207,9 @@ export default function GiveawaySection({ translations, lang, currentUser }: Giv
                 </div>
 
               </div>
-
             </div>
-          ) : (
-            <div className="p-8 rounded-3xl border border-dashed border-white/10 bg-[#12131a]/30 text-center flex flex-col items-center justify-center space-y-3">
-              <Gift className="h-12 w-12 text-gray-600 animate-pulse" />
-              <div>
-                <h3 className="font-display text-md font-bold text-gray-400 uppercase tracking-wide">
-                  {lang === "TR" ? "Aktif Çekiliş Bulunmuyor" : "No Active Giveaway"}
-                </h3>
-                <p className="text-xs text-gray-500 max-w-sm mx-auto mt-1">
-                  {lang === "TR" 
-                    ? "Şu anda yayında aktif bir çekiliş yok. Admin panelinden veya yukarıdan yeni bir çekiliş başlatabilirsiniz." 
-                    : "No active giveaways running. You can initiate a custom one from the trigger button above."}
-                </p>
-              </div>
-            </div>
-          )}
+          );
+        })()}
         </div>
 
         {/* Past completed giveaways (Right 1 column) */}

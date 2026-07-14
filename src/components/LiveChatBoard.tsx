@@ -410,7 +410,11 @@ export default function LiveChatBoard({
       // Sync active test role
       const savedTestRole = localStorage.getItem("weew_chat_test_role");
       if (savedTestRole) {
-        setTestRole(savedTestRole as any);
+        if (savedTestRole === "admin" && currentUser?.role !== "admin") {
+          setTestRole("user");
+        } else {
+          setTestRole(savedTestRole as any);
+        }
       }
 
       // Sync censored words
@@ -1237,7 +1241,7 @@ export default function LiveChatBoard({
       </div>
 
       {/* Admin Quick Options Row */}
-      {(currentUser?.role === "admin" || testRole === "admin") && (
+      {currentUser?.role === "admin" && (
         <div className="px-4 py-2 bg-[#12131d] border-b border-white/5 flex flex-wrap gap-2 items-center justify-between text-[11px] text-gray-400 select-none">
           <span className="font-bold text-purple-400 flex items-center gap-1">
             <Crown className="h-3 w-3 text-purple-400" /> {lang === "TR" ? "Yönetici Paneli" : "Admin Panel"}
